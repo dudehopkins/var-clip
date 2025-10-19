@@ -194,8 +194,23 @@ export const useRealtimeSession = (sessionCode: string) => {
 
     if (error) {
       toast.error("Failed to remove item");
+    } else {
+      toast.success("Item removed");
     }
   }, []);
+
+  const clearText = useCallback(async () => {
+    if (!sessionId) return;
+
+    const textItems = items.filter((item) => item.item_type === "text");
+    
+    for (const item of textItems) {
+      await supabase
+        .from("session_items")
+        .delete()
+        .eq("id", item.id);
+    }
+  }, [sessionId, items]);
 
   return {
     isConnected,
@@ -204,5 +219,6 @@ export const useRealtimeSession = (sessionCode: string) => {
     addTextItem,
     addFileItem,
     removeItem,
+    clearText,
   };
 };

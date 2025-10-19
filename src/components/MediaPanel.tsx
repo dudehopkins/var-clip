@@ -1,7 +1,8 @@
-import { Upload, X, File, Image as ImageIcon } from "lucide-react";
+import { Upload, X, File, Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface MediaItem {
   id: string;
@@ -15,9 +16,10 @@ interface MediaPanelProps {
   items: MediaItem[];
   onUpload: (file: File) => void;
   onRemove: (id: string) => void;
+  onDownload: (url: string, name: string) => void;
 }
 
-export const MediaPanel = ({ items, onUpload, onRemove }: MediaPanelProps) => {
+export const MediaPanel = ({ items, onUpload, onRemove, onDownload }: MediaPanelProps) => {
   const [isDragging, setIsDragging] = useState(false);
 
   const handleDrop = (e: React.DragEvent) => {
@@ -98,20 +100,32 @@ export const MediaPanel = ({ items, onUpload, onRemove }: MediaPanelProps) => {
                 className="relative group rounded-lg overflow-hidden border border-border bg-card hover:border-primary/50 transition-all animate-slide-in"
               >
                 {item.type === "image" ? (
-                  <div className="relative aspect-video">
-                    <img
-                      src={item.url}
-                      alt="Uploaded content"
-                      className="w-full h-full object-cover"
-                    />
-                    <Button
-                      size="icon"
-                      variant="destructive"
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7"
-                      onClick={() => onRemove(item.id)}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+                  <div className="relative">
+                    <div className="aspect-video">
+                      <img
+                        src={item.url}
+                        alt="Uploaded content"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="h-8 w-8 bg-background/80 backdrop-blur-sm hover:bg-background"
+                        onClick={() => onDownload(item.url, item.name || "image")}
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        className="h-8 w-8"
+                        onClick={() => onRemove(item.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center gap-3 p-3">
@@ -126,14 +140,24 @@ export const MediaPanel = ({ items, onUpload, onRemove }: MediaPanelProps) => {
                         {formatFileSize(item.size)}
                       </p>
                     </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8"
-                      onClick={() => onRemove(item.id)}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => onDownload(item.url, item.name || "file")}
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => onRemove(item.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

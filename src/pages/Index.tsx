@@ -24,7 +24,7 @@ const Index = () => {
     }
   }, [urlSessionCode, navigate]);
 
-  const { isConnected, userCount, items, addTextItem, addFileItem, removeItem } =
+  const { isConnected, userCount, items, addTextItem, addFileItem, removeItem, clearText } =
     useRealtimeSession(sessionCode);
 
   // Sync text content from items
@@ -35,16 +35,24 @@ const Index = () => {
       if (latestText.content !== textContent) {
         setTextContent(latestText.content || "");
       }
+    } else if (textItems.length === 0 && textContent) {
+      // Clear local text if all text items are deleted
+      setTextContent("");
     }
   }, [items]);
 
   const handleTextChange = (content: string) => {
     setTextContent(content);
-    // Debounce the update
+    // Debounce the update for performance
     const timeoutId = setTimeout(() => {
       addTextItem(content);
-    }, 500);
+    }, 300);
     return () => clearTimeout(timeoutId);
+  };
+
+  const handleClearText = async () => {
+    setTextContent("");
+    await clearText();
   };
 
   const handlePaste = async (e: React.ClipboardEvent) => {
@@ -66,6 +74,27 @@ const Index = () => {
 
   const handleFileUpload = async (file: File) => {
     await addFileItem(file);
+  };
+
+  const handleDownload = async (url: string, name: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      window.URL.revokeObjectURL(blobUrl);
+      toast.success("Download started!");
+    } catch (error) {
+      toast.error("Failed to download file");
+      console.error(error);
+    }
   };
 
   const mediaItems = items
@@ -96,6 +125,7 @@ const Index = () => {
             content={textContent}
             onChange={handleTextChange}
             onPaste={handlePaste}
+            onClear={handleClearText}
           />
         </div>
         
@@ -104,6 +134,7 @@ const Index = () => {
             items={mediaItems}
             onUpload={handleFileUpload}
             onRemove={removeItem}
+            onDownload={handleDownload}
           />
         </div>
       </main>

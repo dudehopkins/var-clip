@@ -1,5 +1,5 @@
 import { Textarea } from "@/components/ui/textarea";
-import { Copy, Send } from "lucide-react";
+import { Copy, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -7,12 +7,18 @@ interface TextEditorProps {
   content: string;
   onChange: (content: string) => void;
   onPaste: (e: React.ClipboardEvent) => void;
+  onClear: () => void;
 }
 
-export const TextEditor = ({ content, onChange, onPaste }: TextEditorProps) => {
+export const TextEditor = ({ content, onChange, onPaste, onClear }: TextEditorProps) => {
   const handleCopy = () => {
     navigator.clipboard.writeText(content);
     toast.success("Copied to clipboard!");
+  };
+
+  const handleClear = () => {
+    onClear();
+    toast.success("Text cleared!");
   };
 
   return (
@@ -29,6 +35,16 @@ export const TextEditor = ({ content, onChange, onPaste }: TextEditorProps) => {
           >
             <Copy className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Copy</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleClear}
+            disabled={!content}
+            className="h-8 gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Clear</span>
           </Button>
         </div>
       </div>
