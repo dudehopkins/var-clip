@@ -43,12 +43,17 @@ const Index = () => {
 
   const handleTextChange = (content: string) => {
     setTextContent(content);
-    // Debounce the update for performance
-    const timeoutId = setTimeout(() => {
-      addTextItem(content);
-    }, 300);
-    return () => clearTimeout(timeoutId);
   };
+
+  // Debounced save effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (textContent) {
+        addTextItem(textContent);
+      }
+    }, 100);
+    return () => clearTimeout(timeoutId);
+  }, [textContent, addTextItem]);
 
   const handleClearText = async () => {
     setTextContent("");

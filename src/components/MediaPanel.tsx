@@ -84,7 +84,7 @@ export const MediaPanel = ({ items, onUpload, onRemove, onDownload }: MediaPanel
                   type="file"
                   className="hidden"
                   onChange={handleFileInput}
-                  accept="image/*,.pdf,.doc,.docx,.txt"
+                  accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.csv"
                 />
                 <Button variant="outline" size="sm" asChild>
                   <span className="cursor-pointer">Browse Files</span>
