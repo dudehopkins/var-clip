@@ -10,14 +10,15 @@ import { toast } from "sonner";
 const Index = () => {
   const { sessionCode } = useParams();
   const [textContent, setTextContent] = useState("");
+
+  // Initialize hooks first (hooks must be called unconditionally)
+  const { isConnected, userCount, items, addTextItem, addFileItem, removeItem, clearText } =
+    useRealtimeSession(sessionCode || "");
   
   // Show landing page if no session code
   if (!sessionCode) {
     return <SessionLanding />;
   }
-
-  const { isConnected, userCount, items, addTextItem, addFileItem, removeItem, clearText } =
-    useRealtimeSession(sessionCode);
 
   // Sync text content from items
   useEffect(() => {
