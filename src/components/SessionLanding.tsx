@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Clipboard, ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { AnimatedBackground } from "./AnimatedBackground";
 
 export const SessionLanding = () => {
   const navigate = useNavigate();
@@ -42,15 +43,16 @@ export const SessionLanding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8 animate-fade-in">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
+      <AnimatedBackground />
+      <div className="w-full max-w-md space-y-8 animate-fade-in relative z-10">
         <div className="text-center space-y-3">
           <div className="flex justify-center">
-            <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 inline-block">
-              <Clipboard className="w-12 h-12 text-primary" />
+            <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 inline-block animate-glow-pulse">
+              <Clipboard className="w-12 h-12 text-primary animate-pulse" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-foreground">Vars Clip</h1>
+          <h1 className="text-4xl font-bold text-foreground bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-gradient">Vars Clip</h1>
           <p className="text-muted-foreground">
             Real-time collaborative clipboard for text, images, and files
           </p>
