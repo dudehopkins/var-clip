@@ -130,18 +130,34 @@ export const useRealtimeSession = (sessionCode: string) => {
     async (content: string) => {
       if (!sessionId || !content.trim()) return;
 
-      const { error } = await supabase.from("session_items").insert({
-        session_id: sessionId,
-        item_type: "text",
-        content,
-        position: items.length,
-      });
+      // Check if there's already a text item for this session
+      const existingTextItem = items.find((item) => item.item_type === "text");
 
-      if (error) {
-        toast.error("Failed to save text");
+      if (existingTextItem) {
+        // Update existing text item
+        const { error } = await supabase
+          .from("session_items")
+          .update({ content })
+          .eq("id", existingTextItem.id);
+
+        if (error) {
+          toast.error("Failed to save text");
+        }
+      } else {
+        // Create new text item
+        const { error } = await supabase.from("session_items").insert({
+          session_id: sessionId,
+          item_type: "text",
+          content,
+          position: items.length,
+        });
+
+        if (error) {
+          toast.error("Failed to save text");
+        }
       }
     },
-    [sessionId, items.length]
+    [sessionId, items]
   );
 
   const addFileItem = useCallback(
@@ -204,11 +220,15 @@ export const useRealtimeSession = (sessionCode: string) => {
 
     const textItems = items.filter((item) => item.item_type === "text");
     
-    for (const item of textItems) {
-      await supabase
+    if (textItems.length > 0) {
+      const { error } = await supabase
         .from("session_items")
         .delete()
-        .eq("id", item.id);
+        .in("id", textItems.map(item => item.id));
+      
+      if (error) {
+        toast.error("Failed to clear text");
+      }
     }
   }, [sessionId, items]);
 

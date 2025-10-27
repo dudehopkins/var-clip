@@ -25,11 +25,11 @@ const Index = () => {
     const textItems = items.filter((item) => item.item_type === "text");
     if (textItems.length > 0) {
       const latestText = textItems[textItems.length - 1];
-      if (latestText.content !== textContent) {
-        setTextContent(latestText.content || "");
+      // Only update if content actually changed AND we're not currently typing
+      if (latestText.content && latestText.content !== textContent) {
+        setTextContent(latestText.content);
       }
-    } else if (textItems.length === 0 && textContent) {
-      // Clear local text if all text items are deleted
+    } else if (textItems.length === 0) {
       setTextContent("");
     }
   }, [items]);
@@ -44,7 +44,7 @@ const Index = () => {
       if (textContent) {
         addTextItem(textContent);
       }
-    }, 100);
+    }, 500);
     return () => clearTimeout(timeoutId);
   }, [textContent, addTextItem]);
 
