@@ -1,28 +1,20 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { ClipboardHeader } from "@/components/ClipboardHeader";
 import { TextEditor } from "@/components/TextEditor";
 import { MediaPanel } from "@/components/MediaPanel";
+import { SessionLanding } from "@/components/SessionLanding";
 import { useRealtimeSession } from "@/hooks/useRealtimeSession";
 import { toast } from "sonner";
 
 const Index = () => {
-  const navigate = useNavigate();
-  const { sessionCode: urlSessionCode } = useParams();
-  const [sessionCode, setSessionCode] = useState<string>("");
+  const { sessionCode } = useParams();
   const [textContent, setTextContent] = useState("");
   
-  // Generate or use existing session code
-  useEffect(() => {
-    if (urlSessionCode) {
-      setSessionCode(urlSessionCode);
-    } else {
-      // Generate random session code
-      const newCode = Math.random().toString(36).substring(2, 8);
-      setSessionCode(newCode);
-      navigate(`/${newCode}`, { replace: true });
-    }
-  }, [urlSessionCode, navigate]);
+  // Show landing page if no session code
+  if (!sessionCode) {
+    return <SessionLanding />;
+  }
 
   const { isConnected, userCount, items, addTextItem, addFileItem, removeItem, clearText } =
     useRealtimeSession(sessionCode);
@@ -111,10 +103,6 @@ const Index = () => {
       name: item.file_name,
       size: item.file_size,
     }));
-
-  if (!sessionCode) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
