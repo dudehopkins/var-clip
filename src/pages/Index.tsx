@@ -15,11 +15,6 @@ const Index = () => {
   const { isConnected, userCount, items, addTextItem, addFileItem, removeItem, clearText, uploadProgress, isUploading } =
     useRealtimeSession(sessionCode || "");
   
-  // Show landing page if no session code
-  if (!sessionCode) {
-    return <SessionLanding />;
-  }
-
   // Sync text content from items
   useEffect(() => {
     const textItems = items.filter((item) => item.item_type === "text");
@@ -47,6 +42,11 @@ const Index = () => {
     }, 500);
     return () => clearTimeout(timeoutId);
   }, [textContent, addTextItem]);
+
+  // Show landing page if no session code
+  if (!sessionCode) {
+    return <SessionLanding />;
+  }
 
   const handleClearText = async () => {
     setTextContent("");
