@@ -12,7 +12,7 @@ const Index = () => {
   const [textContent, setTextContent] = useState("");
 
   // Initialize hooks first (hooks must be called unconditionally)
-  const { isConnected, userCount, items, addTextItem, addFileItem, removeItem, clearText } =
+  const { isConnected, userCount, items, addTextItem, addFileItem, removeItem, clearText, uploadProgress, isUploading } =
     useRealtimeSession(sessionCode || "");
   
   // Show landing page if no session code
@@ -117,8 +117,8 @@ const Index = () => {
         userCount={userCount}
       />
       
-      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        <div className="flex-1 border-b lg:border-b-0 lg:border-r border-border">
+      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden h-[calc(100vh-4rem)]">
+        <div className="flex-1 h-full border-b lg:border-b-0 lg:border-r border-border">
           <TextEditor
             content={textContent}
             onChange={handleTextChange}
@@ -127,12 +127,14 @@ const Index = () => {
           />
         </div>
         
-        <div className="flex-1 lg:max-w-md xl:max-w-lg">
+        <div className="w-full lg:w-[400px] xl:w-[480px] h-full">
           <MediaPanel
             items={mediaItems}
             onUpload={handleFileUpload}
             onRemove={removeItem}
             onDownload={handleDownload}
+            uploadProgress={uploadProgress}
+            isUploading={isUploading}
           />
         </div>
       </main>

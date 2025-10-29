@@ -17,9 +17,11 @@ interface MediaPanelProps {
   onUpload: (file: File) => void;
   onRemove: (id: string) => void;
   onDownload: (url: string, name: string) => void;
+  uploadProgress?: number;
+  isUploading?: boolean;
 }
 
-export const MediaPanel = ({ items, onUpload, onRemove, onDownload }: MediaPanelProps) => {
+export const MediaPanel = ({ items, onUpload, onRemove, onDownload, uploadProgress = 0, isUploading = false }: MediaPanelProps) => {
   const [isDragging, setIsDragging] = useState(false);
 
   const handleDrop = (e: React.DragEvent) => {
@@ -52,6 +54,45 @@ export const MediaPanel = ({ items, onUpload, onRemove, onDownload }: MediaPanel
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
+        {isUploading && (
+          <div className="mb-4 p-4 border border-border rounded-lg bg-card">
+            <div className="flex items-center gap-4">
+              <div className="relative w-16 h-16">
+                <svg className="w-16 h-16 transform -rotate-90">
+                  <circle
+                    cx="32"
+                    cy="32"
+                    r="28"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                    className="text-muted"
+                  />
+                  <circle
+                    cx="32"
+                    cy="32"
+                    r="28"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 28}`}
+                    strokeDashoffset={`${2 * Math.PI * 28 * (1 - uploadProgress / 100)}`}
+                    className="text-primary transition-all duration-300"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-sm font-semibold text-foreground">{uploadProgress}%</span>
+                </div>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">Uploading...</p>
+                <p className="text-xs text-muted-foreground">Please wait</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {items.length === 0 ? (
           <div
             onDrop={handleDrop}

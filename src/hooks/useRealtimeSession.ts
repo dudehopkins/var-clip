@@ -20,6 +20,8 @@ export const useRealtimeSession = (sessionCode: string) => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [items, setItems] = useState<SessionItem[]>([]);
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Initialize or join session
   useEffect(() => {
@@ -165,13 +167,24 @@ export const useRealtimeSession = (sessionCode: string) => {
       if (!sessionId) return;
 
       try {
-        // Upload file to Supabase Storage
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        // Upload file to Supabase Storage with progress tracking
         const fileExt = file.name.split(".").pop();
         const fileName = `${sessionId}/${Date.now()}.${fileExt}`;
         
+        // Simulate progress for smaller files (Supabase doesn't provide native progress)
+        const progressInterval = setInterval(() => {
+          setUploadProgress(prev => Math.min(prev + 10, 90));
+        }, 100);
+
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from("session-files")
           .upload(fileName, file);
+
+        clearInterval(progressInterval);
+        setUploadProgress(95);
 
         if (uploadError) throw uploadError;
 
@@ -193,10 +206,16 @@ export const useRealtimeSession = (sessionCode: string) => {
 
         if (error) throw error;
 
+        setUploadProgress(100);
         toast.success("File uploaded successfully!");
       } catch (error) {
         toast.error("Failed to upload file");
         console.error(error);
+      } finally {
+        setTimeout(() => {
+          setIsUploading(false);
+          setUploadProgress(0);
+        }, 500);
       }
     },
     [sessionId, items.length]
@@ -240,5 +259,7 @@ export const useRealtimeSession = (sessionCode: string) => {
     addFileItem,
     removeItem,
     clearText,
+    uploadProgress,
+    isUploading,
   };
 };
