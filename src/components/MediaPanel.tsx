@@ -49,8 +49,8 @@ export const MediaPanel = ({ items, onUpload, onRemove, onDownload, uploadProgre
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-3 border-b border-border">
-        <h2 className="text-sm font-medium text-muted-foreground">Media & Files</h2>
+      <div className="flex items-center justify-between p-3 border-b border-border bg-card/30">
+        <h2 className="text-sm font-semibold text-foreground">Media & Files</h2>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">

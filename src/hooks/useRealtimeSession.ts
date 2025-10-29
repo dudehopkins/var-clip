@@ -222,6 +222,9 @@ export const useRealtimeSession = (sessionCode: string) => {
   );
 
   const removeItem = useCallback(async (itemId: string) => {
+    // Optimistically update UI immediately
+    setItems((prev) => prev.filter((item) => item.id !== itemId));
+    
     const { error } = await supabase
       .from("session_items")
       .delete()
@@ -229,10 +232,17 @@ export const useRealtimeSession = (sessionCode: string) => {
 
     if (error) {
       toast.error("Failed to remove item");
+      // Revert optimistic update on error
+      const { data } = await supabase
+        .from("session_items")
+        .select("*")
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: true });
+      if (data) setItems(data as SessionItem[]);
     } else {
       toast.success("Item removed");
     }
-  }, []);
+  }, [sessionId]);
 
   const clearText = useCallback(async () => {
     if (!sessionId) return;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { ClipboardHeader } from "@/components/ClipboardHeader";
 import { TextEditor } from "@/components/TextEditor";
@@ -10,36 +10,44 @@ import { toast } from "sonner";
 const Index = () => {
   const { sessionCode } = useParams();
   const [textContent, setTextContent] = useState("");
+  const isTypingRef = useRef(false);
+  const lastSavedContentRef = useRef("");
 
   // Initialize hooks first (hooks must be called unconditionally)
   const { isConnected, userCount, items, addTextItem, addFileItem, removeItem, clearText, uploadProgress, isUploading } =
     useRealtimeSession(sessionCode || "");
   
-  // Sync text content from items
+  // Sync text content from items (only when not actively typing)
   useEffect(() => {
+    if (isTypingRef.current) return;
+    
     const textItems = items.filter((item) => item.item_type === "text");
     if (textItems.length > 0) {
       const latestText = textItems[textItems.length - 1];
-      // Only update if content actually changed AND we're not currently typing
       if (latestText.content && latestText.content !== textContent) {
         setTextContent(latestText.content);
+        lastSavedContentRef.current = latestText.content;
       }
     } else if (textItems.length === 0) {
       setTextContent("");
+      lastSavedContentRef.current = "";
     }
   }, [items]);
 
   const handleTextChange = (content: string) => {
     setTextContent(content);
+    isTypingRef.current = true;
   };
 
   // Debounced save effect
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (textContent) {
+      if (textContent !== lastSavedContentRef.current) {
         addTextItem(textContent);
+        lastSavedContentRef.current = textContent;
       }
-    }, 500);
+      isTypingRef.current = false;
+    }, 800);
     return () => clearTimeout(timeoutId);
   }, [textContent, addTextItem]);
 
@@ -107,9 +115,10 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
-      {/* Subtle background effect */}
-      <div className="fixed inset-0 -z-10 bg-grid-pattern opacity-[0.02]" />
-      <div className="fixed top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -z-10" />
+      {/* Enhanced background effects */}
+      <div className="fixed inset-0 -z-10 bg-grid-pattern opacity-[0.03]" />
+      <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] -z-10 animate-pulse" />
+      <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[100px] -z-10" />
       
       <ClipboardHeader
         sessionCode={sessionCode}
@@ -117,8 +126,8 @@ const Index = () => {
         userCount={userCount}
       />
       
-      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden h-[calc(100vh-4rem)]">
-        <div className="flex-1 h-full border-b lg:border-b-0 lg:border-r border-border">
+      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        <div className="flex-1 border-b lg:border-b-0 lg:border-r border-border flex flex-col">
           <TextEditor
             content={textContent}
             onChange={handleTextChange}
@@ -127,7 +136,7 @@ const Index = () => {
           />
         </div>
         
-        <div className="w-full lg:w-[400px] xl:w-[480px] h-full">
+        <div className="w-full lg:w-[400px] xl:w-[480px] flex flex-col">
           <MediaPanel
             items={mediaItems}
             onUpload={handleFileUpload}

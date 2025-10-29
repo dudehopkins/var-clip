@@ -23,8 +23,8 @@ export const TextEditor = ({ content, onChange, onPaste, onClear }: TextEditorPr
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-3 border-b border-border">
-        <h2 className="text-sm font-medium text-muted-foreground">Text Content</h2>
+      <div className="flex items-center justify-between p-3 border-b border-border bg-card/30">
+        <h2 className="text-sm font-semibold text-foreground">Text Content</h2>
         <div className="flex gap-2">
           <Button
             size="sm"
