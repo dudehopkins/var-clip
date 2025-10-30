@@ -4,6 +4,7 @@ import { ClipboardHeader } from "@/components/ClipboardHeader";
 import { TextEditor } from "@/components/TextEditor";
 import { MediaPanel } from "@/components/MediaPanel";
 import { SessionLanding } from "@/components/SessionLanding";
+import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { useRealtimeSession } from "@/hooks/useRealtimeSession";
 import { toast } from "sonner";
 
@@ -115,16 +116,23 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
-      {/* Enhanced background effects */}
-      <div className="fixed inset-0 -z-10 bg-grid-pattern opacity-[0.03]" />
-      <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] -z-10 animate-pulse" />
-      <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[100px] -z-10" />
+      <AnimatedBackground />
       
       <ClipboardHeader
         sessionCode={sessionCode}
         isConnected={isConnected}
         userCount={userCount}
       />
+      
+      {/* Unified Section Headers */}
+      <div className="flex items-center border-b border-border bg-card/30 backdrop-blur-sm">
+        <div className="flex-1 p-3 lg:border-r border-border">
+          <h2 className="text-sm font-semibold text-foreground">Text Content</h2>
+        </div>
+        <div className="w-full lg:w-[400px] xl:w-[480px] p-3">
+          <h2 className="text-sm font-semibold text-foreground">Media & Files</h2>
+        </div>
+      </div>
       
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         <div className="flex-1 border-b lg:border-b-0 lg:border-r border-border flex flex-col">

@@ -1,4 +1,4 @@
-import { Upload, X, File, Download, Trash2 } from "lucide-react";
+import { Upload, X, File, Download, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -34,11 +34,9 @@ export const MediaPanel = ({ items, onUpload, onRemove, onDownload, uploadProgre
     }
   };
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      onUpload(file);
-    }
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach((file) => onUpload(file));
   };
 
   const formatFileSize = (bytes?: number) => {
@@ -48,9 +46,34 @@ export const MediaPanel = ({ items, onUpload, onRemove, onDownload, uploadProgre
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-3 border-b border-border bg-card/30">
-        <h2 className="text-sm font-semibold text-foreground">Media & Files</h2>
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex items-center justify-end p-3 border-b border-border/50 bg-gradient-to-r from-card/40 to-card/20 backdrop-blur-sm">
+        <label
+          htmlFor="file-upload"
+          className="cursor-pointer"
+        >
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 gap-2 hover:bg-primary/10 hover:text-primary transition-all pointer-events-none"
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Upload className="w-3.5 h-3.5" />
+            )}
+            <span className="hidden sm:inline">Upload</span>
+          </Button>
+        </label>
+        <input
+          id="file-upload"
+          type="file"
+          className="hidden"
+          onChange={handleFileChange}
+          multiple
+          disabled={isUploading}
+        />
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
@@ -124,8 +147,9 @@ export const MediaPanel = ({ items, onUpload, onRemove, onDownload, uploadProgre
                 <input
                   type="file"
                   className="hidden"
-                  onChange={handleFileInput}
+                  onChange={handleFileChange}
                   accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.csv,.json,.xml,.sql,.parquet,.avro,.orc,.tsv,.zip,.rar"
+                  multiple
                 />
                 <Button variant="outline" size="sm" asChild>
                   <span className="cursor-pointer">Browse Files</span>

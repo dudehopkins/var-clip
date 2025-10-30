@@ -17,39 +17,43 @@ export const ClipboardHeader = ({ sessionCode, isConnected, userCount }: Clipboa
   };
 
   return (
-    <header className="flex items-center justify-between p-4 md:p-6 border-b border-border backdrop-blur-sm bg-background/50">
-      <div className="flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 shadow-lg">
-          <Clipboard className="w-6 h-6 text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.5)]" />
-        </div>
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Clipboard
-          </h1>
-          <div className="flex items-center gap-2 mt-1">
-            <Badge 
-              variant={isConnected ? "default" : "secondary"}
-              className={isConnected ? "bg-accent text-accent-foreground animate-glow-pulse border-accent/50" : ""}
-            >
-              {isConnected ? "Connected" : "Connecting..."}
-            </Badge>
-            {userCount > 0 && (
-              <Badge variant="outline" className="gap-1 border-primary/30">
-                <Users className="w-3 h-3" />
-                {userCount}
-              </Badge>
-            )}
+    <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50" 
+            style={{ boxShadow: 'var(--shadow-card)' }}>
+      <div className="flex items-center justify-between p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary/30 to-secondary/30 border border-primary/30 backdrop-blur-sm"
+               style={{ boxShadow: 'var(--shadow-neon)' }}>
+            <Clipboard className="w-5 h-5 text-primary animate-pulse" />
+            <h1 className="text-xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              ClipSync
+            </h1>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted/50 border border-border backdrop-blur-sm">
+            <span className="text-xs text-muted-foreground font-medium">Session:</span>
+            <code className="text-sm font-mono text-primary font-bold tracking-wider">{sessionCode}</code>
           </div>
         </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg bg-card/50 border border-border">
+            <Users className="w-4 h-4 text-accent" />
+            <span className="text-foreground font-semibold">{userCount}</span>
+            <span className="text-muted-foreground">online</span>
+          </div>
+          {isConnected ? (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-accent/20 border-2 border-accent/50 animate-glow-pulse"
+                 style={{ boxShadow: '0 0 20px hsl(var(--accent) / 0.5)' }}>
+              <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+              <span className="text-sm font-bold text-accent">Connected</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-destructive/20 border-2 border-destructive/50">
+              <div className="w-2 h-2 rounded-full bg-destructive" />
+              <span className="text-sm font-bold text-destructive">Disconnected</span>
+            </div>
+          )}
+        </div>
       </div>
-      
-      <Button 
-        onClick={handleShare}
-        className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg hover:shadow-xl transition-all"
-      >
-        <span className="hidden md:inline font-semibold">{sessionCode}</span>
-        <Share2 className="w-4 h-4" />
-      </Button>
     </header>
   );
 };
