@@ -64,6 +64,40 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="hsl(280, 90%, 65%)" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>') 12 12, auto;
+  }
+
+  button, a, [role="button"] {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="hsl(280, 90%, 65%)" stroke="hsl(320, 80%, 60%)" stroke-width="2"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="white"/></svg>') 12 12, pointer;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+    border-radius: 10px;
+    border: 2px solid hsl(var(--muted));
+    box-shadow: 0 0 10px hsl(var(--primary) / 0.5);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--accent)));
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.8);
+  }
+
+  /* Firefox Scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary)) hsl(var(--muted));
   }
 
   .bg-grid-pattern {
@@ -171,6 +205,39 @@ All colors MUST be HSL.
     }
   }
 
+  @keyframes float-diagonal {
+    0%, 100% {
+      transform: translate(0, 0);
+    }
+    25% {
+      transform: translate(20px, -20px);
+    }
+    50% {
+      transform: translate(-20px, 20px);
+    }
+    75% {
+      transform: translate(20px, 20px);
+    }
+  }
+
+  @keyframes morph {
+    0%, 100% {
+      border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    }
+    50% {
+      border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+    }
+  }
+
+  @keyframes scan-line {
+    0% {
+      transform: translateY(-100%);
+    }
+    100% {
+      transform: translateY(100vh);
+    }
+  }
+
   .animate-glitch {
     animation: glitch 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
   }
@@ -181,5 +248,36 @@ All colors MUST be HSL.
 
   .animate-rotate-slow {
     animation: rotate-slow 20s linear infinite;
+  }
+
+  .animate-float-diagonal {
+    animation: float-diagonal 8s ease-in-out infinite;
+  }
+
+  .animate-morph {
+    animation: morph 10s ease-in-out infinite;
+  }
+
+  .animate-scan-line {
+    animation: scan-line 8s linear infinite;
+  }
+
+  /* Particle effect */
+  @keyframes particle-float {
+    0% {
+      transform: translate(0, 0) scale(1);
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      transform: translate(var(--tx), var(--ty)) scale(0);
+      opacity: 0;
+    }
+  }
+
+  .particle {
+    animation: particle-float 3s ease-in-out infinite;
   }
 }

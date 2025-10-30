@@ -65,7 +65,7 @@ export const SessionLanding = () => {
             </label>
             <div className="flex gap-2">
               <Input
-                placeholder="Enter custom code (e.g., frdna)"
+                placeholder="Enter custom code"
                 value={customCode}
                 onChange={(e) => setCustomCode(e.target.value)}
                 onKeyPress={handleKeyPress}

@@ -1,6 +1,4 @@
-import { Clipboard, Share2, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Clipboard, Users, Share2, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 interface ClipboardHeaderProps {
@@ -13,7 +11,7 @@ export const ClipboardHeader = ({ sessionCode, isConnected, userCount }: Clipboa
   const handleShare = () => {
     const url = `${window.location.origin}/${sessionCode}`;
     navigator.clipboard.writeText(url);
-    toast.success("Link copied to clipboard!");
+    toast.success("Session link copied to clipboard!");
   };
 
   return (
@@ -28,10 +26,14 @@ export const ClipboardHeader = ({ sessionCode, isConnected, userCount }: Clipboa
               ClipSync
             </h1>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted/50 border border-border backdrop-blur-sm">
+          <button 
+            onClick={handleShare}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted/50 border border-border backdrop-blur-sm hover:bg-muted/70 hover:border-primary/50 transition-all group cursor-pointer"
+          >
             <span className="text-xs text-muted-foreground font-medium">Session:</span>
             <code className="text-sm font-mono text-primary font-bold tracking-wider">{sessionCode}</code>
-          </div>
+            <Copy className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+          </button>
         </div>
         
         <div className="flex items-center gap-4">

@@ -5,6 +5,7 @@ import { TextEditor } from "@/components/TextEditor";
 import { MediaPanel } from "@/components/MediaPanel";
 import { SessionLanding } from "@/components/SessionLanding";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
+import { AdvancedGraphics } from "@/components/AdvancedGraphics";
 import { useRealtimeSession } from "@/hooks/useRealtimeSession";
 import { toast } from "sonner";
 
@@ -117,6 +118,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
       <AnimatedBackground />
+      <AdvancedGraphics />
       
       <ClipboardHeader
         sessionCode={sessionCode}
