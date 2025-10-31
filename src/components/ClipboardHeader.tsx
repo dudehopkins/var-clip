@@ -38,6 +38,8 @@ export const ClipboardHeader = ({ sessionCode, isConnected, userCount }: Clipboa
         </div>
         
         <div className="flex items-center gap-4">
+          <ThemeToggle />
+          
           <div className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg bg-card/50 border border-border">
             <Users className="w-4 h-4 text-accent" />
             <span className="text-foreground font-semibold">{userCount}</span>

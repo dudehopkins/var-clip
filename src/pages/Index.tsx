@@ -1,19 +1,126 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { ClipboardHeader } from "@/components/ClipboardHeader";
 import { TextEditor } from "@/components/TextEditor";
 import { MediaPanel } from "@/components/MediaPanel";
 import { SessionLanding } from "@/components/SessionLanding";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { AdvancedGraphics } from "@/components/AdvancedGraphics";
+import { SessionPasswordDialog } from "@/components/SessionPasswordDialog";
 import { useRealtimeSession } from "@/hooks/useRealtimeSession";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import bcrypt from "bcryptjs";
 
 const Index = () => {
   const { sessionCode } = useParams();
+  const navigate = useNavigate();
   const [textContent, setTextContent] = useState("");
   const isTypingRef = useRef(false);
   const lastSavedContentRef = useRef("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [isNewSession, setIsNewSession] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
+
+  // Check if session exists and requires password
+  useEffect(() => {
+    const checkSession = async () => {
+      if (!sessionCode) {
+        setIsCheckingSession(false);
+        return;
+      }
+
+      try {
+        const { data: session, error } = await supabase
+          .from("sessions")
+          .select("password_hash")
+          .eq("session_code", sessionCode)
+          .single();
+
+        if (error || !session) {
+          // New session
+          setIsNewSession(true);
+          setShowPasswordDialog(true);
+          setIsCheckingSession(false);
+          return;
+        }
+
+        if (session.password_hash) {
+          // Protected session - check if already authenticated
+          const storedAuth = sessionStorage.getItem(`session_auth_${sessionCode}`);
+          if (storedAuth === "true") {
+            setIsAuthenticated(true);
+          } else {
+            setShowPasswordDialog(true);
+          }
+        } else {
+          // Public session
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error("Error checking session:", error);
+        toast.error("Failed to check session");
+      } finally {
+        setIsCheckingSession(false);
+      }
+    };
+
+    checkSession();
+  }, [sessionCode]);
+
+  const handlePasswordSubmit = async (password: string | null, isProtected: boolean) => {
+    if (!sessionCode) return;
+
+    try {
+      if (isNewSession) {
+        // Create new session
+        const passwordHash = password ? await bcrypt.hash(password, 10) : null;
+        
+        const { error } = await supabase
+          .from("sessions")
+          .insert({
+            session_code: sessionCode,
+            password_hash: passwordHash,
+          });
+
+        if (error) throw error;
+
+        if (password) {
+          sessionStorage.setItem(`session_auth_${sessionCode}`, "true");
+        }
+        setIsAuthenticated(true);
+        setIsNewSession(false);
+        toast.success(isProtected ? "Protected session created!" : "Session created!");
+      } else {
+        // Verify password for existing session
+        const { data: session } = await supabase
+          .from("sessions")
+          .select("password_hash")
+          .eq("session_code", sessionCode)
+          .single();
+
+        if (!session?.password_hash) {
+          setIsAuthenticated(true);
+          return;
+        }
+
+        const isValid = await bcrypt.compare(password || "", session.password_hash);
+        
+        if (isValid) {
+          sessionStorage.setItem(`session_auth_${sessionCode}`, "true");
+          setIsAuthenticated(true);
+          toast.success("Access granted!");
+        } else {
+          toast.error("Incorrect password");
+          setShowPasswordDialog(true);
+        }
+      }
+    } catch (error) {
+      console.error("Error handling password:", error);
+      toast.error("Failed to authenticate");
+    }
+  };
 
   // Initialize hooks first (hooks must be called unconditionally)
   const { isConnected, userCount, items, addTextItem, addFileItem, removeItem, clearText, uploadProgress, isUploading } =
@@ -56,6 +163,22 @@ const Index = () => {
   // Show landing page if no session code
   if (!sessionCode) {
     return <SessionLanding />;
+  }
+
+  // Show loading or password dialog if checking session
+  if (isCheckingSession || !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
+        <AnimatedBackground />
+        <AdvancedGraphics />
+        <SessionPasswordDialog
+          open={showPasswordDialog}
+          onOpenChange={setShowPasswordDialog}
+          onSubmit={handlePasswordSubmit}
+          isNewSession={isNewSession}
+        />
+      </div>
+    );
   }
 
   const handleClearText = async () => {
@@ -127,17 +250,17 @@ const Index = () => {
       />
       
       {/* Unified Section Headers */}
-      <div className="flex items-center border-b border-border bg-card/30 backdrop-blur-sm">
-        <div className="flex-1 p-3 lg:border-r border-border">
+      <div className="flex flex-col lg:flex-row items-stretch border-b border-border bg-card/30 backdrop-blur-sm">
+        <div className="flex-1 p-3 border-b lg:border-b-0 lg:border-r border-border">
           <h2 className="text-sm font-semibold text-foreground">Text Content</h2>
         </div>
-        <div className="w-full lg:w-[400px] xl:w-[480px] p-3">
+        <div className="flex-1 lg:w-[400px] xl:w-[480px] p-3">
           <h2 className="text-sm font-semibold text-foreground">Media & Files</h2>
         </div>
       </div>
       
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 border-b border-border flex flex-col lg:border-r">
+      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        <div className="flex-1 border-b lg:border-b-0 lg:border-r border-border flex flex-col">
           <TextEditor
             content={textContent}
             onChange={handleTextChange}
@@ -146,7 +269,7 @@ const Index = () => {
           />
         </div>
         
-        <div className="w-full lg:w-[400px] xl:w-[480px] flex flex-col lg:flex-row lg:w-full lg:border-t">
+        <div className="flex-1 lg:w-[400px] xl:w-[480px] flex flex-col">
           <MediaPanel
             items={mediaItems}
             onUpload={handleFileUpload}
