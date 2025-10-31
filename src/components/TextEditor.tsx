@@ -2,6 +2,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Copy, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useTypingSound } from "@/hooks/useTypingSound";
 
 interface TextEditorProps {
   content: string;
@@ -11,6 +12,7 @@ interface TextEditorProps {
 }
 
 export const TextEditor = ({ content, onChange, onPaste, onClear }: TextEditorProps) => {
+  const { playKeystroke } = useTypingSound();
   const handleCopy = () => {
     navigator.clipboard.writeText(content);
     toast.success("Copied to clipboard!");
@@ -48,7 +50,10 @@ export const TextEditor = ({ content, onChange, onPaste, onClear }: TextEditorPr
       
       <Textarea
         value={content}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          onChange(e.target.value);
+          playKeystroke();
+        }}
         onPaste={onPaste}
         placeholder="Type your text or paste content using Ctrl + V..."
         className="flex-1 resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-foreground placeholder:text-muted-foreground/50 p-4"

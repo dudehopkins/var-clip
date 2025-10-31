@@ -52,7 +52,7 @@ export const SessionLanding = () => {
               <Clipboard className="w-12 h-12 text-primary animate-pulse" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-foreground bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-gradient">Vars Clip</h1>
+          <h1 className="text-4xl font-bold font-orbitron neon-text">CLIP SYNC</h1>
           <p className="text-muted-foreground">
             Real-time collaborative clipboard for text, images, and files
           </p>

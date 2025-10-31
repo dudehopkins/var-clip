@@ -136,8 +136,8 @@ const Index = () => {
         </div>
       </div>
       
-      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        <div className="flex-1 border-b lg:border-b-0 lg:border-r border-border flex flex-col">
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 border-b border-border flex flex-col lg:border-r">
           <TextEditor
             content={textContent}
             onChange={handleTextChange}
@@ -146,7 +146,7 @@ const Index = () => {
           />
         </div>
         
-        <div className="w-full lg:w-[400px] xl:w-[480px] flex flex-col">
+        <div className="w-full lg:w-[400px] xl:w-[480px] flex flex-col lg:flex-row lg:w-full lg:border-t">
           <MediaPanel
             items={mediaItems}
             onUpload={handleFileUpload}

@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        orbitron: ['Orbitron', 'sans-serif'],
+        rajdhani: ['Rajdhani', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -104,10 +108,6 @@ export default {
           "0%, 100%": { transform: "translateY(0px)" },
           "50%": { transform: "translateY(-20px)" },
         },
-        "slideX": {
-          "0%": { transform: "translateX(-100%)" },
-          "100%": { transform: "translateX(100%)" },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -117,10 +117,6 @@ export default {
         "float": "float 6s ease-in-out infinite",
         "float-delayed": "float 6s ease-in-out 3s infinite",
         "pulse-slow": "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-        "ping-slow": "ping 3s cubic-bezier(0, 0, 0.2, 1) infinite",
-        "ping-slower": "ping 4s cubic-bezier(0, 0, 0.2, 1) infinite",
-        "slide-x": "slideX 20s linear infinite",
-        "slide-x-delayed": "slideX 25s linear infinite",
         "fade-in": "slide-in 0.6s ease-out",
       },
       backgroundImage: {

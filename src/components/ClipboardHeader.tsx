@@ -1,5 +1,6 @@
 import { Clipboard, Users, Share2, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface ClipboardHeaderProps {
   sessionCode: string;
