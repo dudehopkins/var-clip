@@ -14,113 +14,13 @@ export type Database = {
   }
   public: {
     Tables: {
-      session_access: {
-        Row: {
-          created_at: string
-          email: string
-          id: string
-          session_id: string
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          id?: string
-          session_id: string
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          id?: string
-          session_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "session_access_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "sessions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      session_items: {
-        Row: {
-          content: string | null
-          created_at: string
-          file_name: string | null
-          file_size: number | null
-          file_url: string | null
-          id: string
-          item_type: string
-          position: number | null
-          session_id: string
-        }
-        Insert: {
-          content?: string | null
-          created_at?: string
-          file_name?: string | null
-          file_size?: number | null
-          file_url?: string | null
-          id?: string
-          item_type: string
-          position?: number | null
-          session_id: string
-        }
-        Update: {
-          content?: string | null
-          created_at?: string
-          file_name?: string | null
-          file_size?: number | null
-          file_url?: string | null
-          id?: string
-          item_type?: string
-          position?: number | null
-          session_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "session_items_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "sessions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      sessions: {
-        Row: {
-          created_at: string
-          id: string
-          is_public: boolean
-          last_activity: string
-          session_code: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_public?: boolean
-          last_activity?: string
-          session_code: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_public?: boolean
-          last_activity?: string
-          session_code?: string
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      generate_session_code: { Args: never; Returns: string }
-      has_session_access: {
-        Args: { p_email: string; p_session_id: string }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
