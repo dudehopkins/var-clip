@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { toast } from "sonner";
+import { textContentSchema, fileSchema } from "@/lib/validation";
 
 interface SessionItem {
   id: string;
@@ -132,6 +133,13 @@ export const useRealtimeSession = (sessionCode: string) => {
     async (content: string) => {
       if (!sessionId || !content.trim()) return;
 
+      // Validate content size
+      const validation = textContentSchema.safeParse(content);
+      if (!validation.success) {
+        toast.error(validation.error.errors[0].message);
+        return;
+      }
+
       // Check if there's already a text item for this session
       const existingTextItem = items.find((item) => item.item_type === "text");
 
@@ -166,6 +174,18 @@ export const useRealtimeSession = (sessionCode: string) => {
     async (file: File) => {
       if (!sessionId) return;
 
+      // Validate file before upload
+      const validation = fileSchema.safeParse({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      });
+      
+      if (!validation.success) {
+        toast.error(validation.error.errors[0].message);
+        return;
+      }
+
       try {
         setIsUploading(true);
         setUploadProgress(0);
@@ -188,17 +208,21 @@ export const useRealtimeSession = (sessionCode: string) => {
 
         if (uploadError) throw uploadError;
 
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
+        // Get signed URL (bucket is now private)
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
           .from("session-files")
-          .getPublicUrl(fileName);
+          .createSignedUrl(fileName, 60 * 60 * 24 * 7); // 7 days expiry
+
+        if (signedUrlError) throw signedUrlError;
+        
+        const fileUrl = signedUrlData.signedUrl;
 
         // Save to database
         const isImage = file.type.startsWith("image/");
         const { error } = await supabase.from("session_items").insert({
           session_id: sessionId,
           item_type: isImage ? "image" : "file",
-          file_url: publicUrl,
+          file_url: fileUrl,
           file_name: file.name,
           file_size: file.size,
           position: items.length,

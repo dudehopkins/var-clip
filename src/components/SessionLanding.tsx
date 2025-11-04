@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Clipboard, ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatedBackground } from "./AnimatedBackground";
+import { sessionCodeSchema } from "@/lib/validation";
 
 export const SessionLanding = () => {
   const navigate = useNavigate();
@@ -23,13 +24,10 @@ export const SessionLanding = () => {
       return;
     }
     
-    if (code.length < 4 || code.length > 20) {
-      toast.error("Session code must be between 4-20 characters");
-      return;
-    }
-    
-    if (!/^[a-z0-9]+$/.test(code)) {
-      toast.error("Session code can only contain lowercase letters and numbers");
+    // Validate with Zod schema
+    const validation = sessionCodeSchema.safeParse(code);
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
       return;
     }
     
@@ -76,7 +74,7 @@ export const SessionLanding = () => {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              4-20 characters, lowercase letters and numbers only
+              4-20 characters, lowercase letters and numbers only (some codes are reserved)
             </p>
           </div>
 

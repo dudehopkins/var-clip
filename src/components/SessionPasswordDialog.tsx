@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Lock, Unlock } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { passwordSchema } from "@/lib/validation";
 
 interface SessionPasswordDialogProps {
   open: boolean;
@@ -39,8 +40,10 @@ export const SessionPasswordDialog = ({
         return;
       }
 
-      if (password.length < 4) {
-        setError("Password must be at least 4 characters");
+      // Validate password strength
+      const validation = passwordSchema.safeParse(password);
+      if (!validation.success) {
+        setError(validation.error.errors[0].message);
         return;
       }
     }

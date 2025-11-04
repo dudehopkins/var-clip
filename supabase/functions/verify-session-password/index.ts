@@ -28,18 +28,52 @@ Deno.serve(async (req) => {
     )
 
     // Validate inputs
-    if (!sessionCode) {
+    if (!sessionCode || sessionCode.length < 4 || sessionCode.length > 20) {
       return new Response(
-        JSON.stringify({ error: 'Session code is required' }),
+        JSON.stringify({ error: 'Session code must be between 4-20 characters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    if (password && password.length < 8) {
+    if (!/^[a-z0-9]+$/.test(sessionCode)) {
       return new Response(
-        JSON.stringify({ error: 'Password must be at least 8 characters' }),
+        JSON.stringify({ error: 'Session code can only contain lowercase letters and numbers' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
+    }
+
+    // Strong password validation
+    if (password) {
+      if (password.length < 12) {
+        return new Response(
+          JSON.stringify({ error: 'Password must be at least 12 characters' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      if (password.length > 128) {
+        return new Response(
+          JSON.stringify({ error: 'Password must not exceed 128 characters' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      if (!/[A-Z]/.test(password)) {
+        return new Response(
+          JSON.stringify({ error: 'Password must contain at least one uppercase letter' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      if (!/[a-z]/.test(password)) {
+        return new Response(
+          JSON.stringify({ error: 'Password must contain at least one lowercase letter' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      if (!/[0-9]/.test(password)) {
+        return new Response(
+          JSON.stringify({ error: 'Password must contain at least one number' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
     }
 
     // Get session by code
