@@ -7,6 +7,7 @@ import { SessionLanding } from "@/components/SessionLanding";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { AdvancedGraphics } from "@/components/AdvancedGraphics";
 import { SessionPasswordDialog } from "@/components/SessionPasswordDialog";
+import { DuckHunt } from "@/components/DuckHunt";
 import { useRealtimeSession } from "@/hooks/useRealtimeSession";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -242,6 +243,7 @@ const Index = () => {
     <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
       <AnimatedBackground />
       <AdvancedGraphics />
+      <DuckHunt />
       
       <ClipboardHeader
         sessionCode={sessionCode}
