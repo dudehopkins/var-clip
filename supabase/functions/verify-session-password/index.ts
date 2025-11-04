@@ -80,11 +80,33 @@ Deno.serve(async (req) => {
         )
       }
 
+      // Generate session token for private sessions
+      let token = null
+      if (!newSession.is_public) {
+        token = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, '')
+        
+        const { error: tokenError } = await supabaseClient
+          .from('session_tokens')
+          .insert({
+            session_id: newSession.id,
+            token: token,
+          })
+        
+        if (tokenError) {
+          console.error('Error creating session token:', tokenError)
+          return new Response(
+            JSON.stringify({ error: 'Failed to create session token' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+      }
+
       return new Response(
         JSON.stringify({ 
           success: true, 
           sessionId: newSession.id,
-          isPublic: newSession.is_public 
+          isPublic: newSession.is_public,
+          token: token
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -130,8 +152,26 @@ Deno.serve(async (req) => {
         )
       }
 
+      // Generate session token for authenticated access
+      const token = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, '')
+      
+      const { error: tokenError } = await supabaseClient
+        .from('session_tokens')
+        .insert({
+          session_id: session.id,
+          token: token,
+        })
+      
+      if (tokenError) {
+        console.error('Error creating session token:', tokenError)
+        return new Response(
+          JSON.stringify({ error: 'Failed to create session token' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
       return new Response(
-        JSON.stringify({ success: true, isPublic: false }),
+        JSON.stringify({ success: true, isPublic: false, token: token }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

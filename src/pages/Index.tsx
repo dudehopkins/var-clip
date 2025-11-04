@@ -33,7 +33,7 @@ const Index = () => {
       try {
         const { data: session, error } = await supabase
           .from("sessions")
-          .select("password_hash")
+          .select("id, password_hash")
           .eq("session_code", sessionCode)
           .single();
 
@@ -46,10 +46,24 @@ const Index = () => {
         }
 
         if (session.password_hash) {
-          // Protected session - check if already authenticated
-          const storedAuth = sessionStorage.getItem(`session_auth_${sessionCode}`);
-          if (storedAuth === "true") {
-            setIsAuthenticated(true);
+          // Protected session - check if token exists and is valid
+          const storedToken = sessionStorage.getItem(`session_token_${sessionCode}`);
+          if (storedToken) {
+            // Validate token with database
+            const { data: tokenData } = await supabase
+              .from('session_tokens')
+              .select('expires_at')
+              .eq('token', storedToken)
+              .eq('session_id', session.id)
+              .single();
+            
+            if (tokenData && new Date(tokenData.expires_at) > new Date()) {
+              setIsAuthenticated(true);
+            } else {
+              // Token invalid or expired
+              sessionStorage.removeItem(`session_token_${sessionCode}`);
+              setShowPasswordDialog(true);
+            }
           } else {
             setShowPasswordDialog(true);
           }
@@ -96,7 +110,11 @@ const Index = () => {
       }
 
       if (data?.success) {
-        sessionStorage.setItem(`session_auth_${sessionCode}`, "true");
+        // Store server-validated token if provided
+        if (data.token) {
+          sessionStorage.setItem(`session_token_${sessionCode}`, data.token);
+        }
+        
         setIsAuthenticated(true);
         setIsNewSession(false);
         setShowPasswordDialog(false);
