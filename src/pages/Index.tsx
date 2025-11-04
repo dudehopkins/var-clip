@@ -10,7 +10,6 @@ import { SessionPasswordDialog } from "@/components/SessionPasswordDialog";
 import { useRealtimeSession } from "@/hooks/useRealtimeSession";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import bcrypt from "bcryptjs";
 
 const Index = () => {
   const { sessionCode } = useParams();
@@ -73,48 +72,40 @@ const Index = () => {
     if (!sessionCode) return;
 
     try {
-      if (isNewSession) {
-        // Create new session
-        const passwordHash = password ? await bcrypt.hash(password, 10) : null;
-        
-        const { error } = await supabase
-          .from("sessions")
-          .insert({
-            session_code: sessionCode,
-            password_hash: passwordHash,
-          });
+      // Call server-side Edge Function for secure password handling
+      const { data, error } = await supabase.functions.invoke('verify-session-password', {
+        body: {
+          sessionCode,
+          password: isProtected ? password : null,
+          isCreating: isNewSession,
+        },
+      });
 
-        if (error) throw error;
+      if (error) {
+        console.error("Edge function error:", error);
+        toast.error("Failed to process request");
+        return;
+      }
 
-        if (password) {
-          sessionStorage.setItem(`session_auth_${sessionCode}`, "true");
-        }
-        setIsAuthenticated(true);
-        setIsNewSession(false);
-        toast.success(isProtected ? "Protected session created!" : "Session created!");
-      } else {
-        // Verify password for existing session
-        const { data: session } = await supabase
-          .from("sessions")
-          .select("password_hash")
-          .eq("session_code", sessionCode)
-          .single();
-
-        if (!session?.password_hash) {
-          setIsAuthenticated(true);
-          return;
-        }
-
-        const isValid = await bcrypt.compare(password || "", session.password_hash);
-        
-        if (isValid) {
-          sessionStorage.setItem(`session_auth_${sessionCode}`, "true");
-          setIsAuthenticated(true);
-          toast.success("Access granted!");
-        } else {
-          toast.error("Incorrect password");
+      if (data?.error) {
+        toast.error(data.error);
+        if (!isNewSession) {
           setShowPasswordDialog(true);
         }
+        return;
+      }
+
+      if (data?.success) {
+        sessionStorage.setItem(`session_auth_${sessionCode}`, "true");
+        setIsAuthenticated(true);
+        setIsNewSession(false);
+        setShowPasswordDialog(false);
+        
+        toast.success(
+          isNewSession 
+            ? (isProtected ? "Protected session created!" : "Session created!") 
+            : "Access granted!"
+        );
       }
     } catch (error) {
       console.error("Error handling password:", error);
