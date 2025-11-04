@@ -9,28 +9,28 @@ All colors MUST be HSL.
 @layer base {
   :root {
     /* Gaming Theme - Light Mode (Futuristic Day) - Cyber Blue/Purple Tint */
-    --background: 210 50% 95%;       /* Light blue-gray */
-    --foreground: 220 60% 15%;       /* Dark blue-black */
-    --card: 210 55% 92%;             /* Slightly darker with blue tint */
-    --card-foreground: 220 60% 20%;
-    --popover: 210 50% 95%;
-    --popover-foreground: 220 60% 15%;
+    --background: 215 40% 88%;       /* Darker blue-gray background */
+    --foreground: 220 70% 12%;       /* Very dark blue-black text */
+    --card: 215 45% 82%;             /* Darker card with blue tint */
+    --card-foreground: 220 70% 15%;
+    --popover: 215 40% 88%;
+    --popover-foreground: 220 70% 12%;
     
     /* Cyber Gaming Colors - Vibrant for Light Mode */
-    --primary: 189 94% 38%;          /* Deep Cyber Cyan */
+    --primary: 189 94% 35%;          /* Deep Cyber Cyan */
     --primary-foreground: 210 50% 98%;
-    --secondary: 265 89% 48%;        /* Deep Electric Purple */
+    --secondary: 265 89% 45%;        /* Deep Electric Purple */
     --secondary-foreground: 210 50% 98%;
-    --accent: 338 100% 48%;          /* Deep Hot Pink */
+    --accent: 338 100% 45%;          /* Deep Hot Pink */
     --accent-foreground: 210 50% 98%;
     
-    --muted: 210 45% 88%;            /* Blue-tinted muted */
-    --muted-foreground: 220 40% 40%;
+    --muted: 215 35% 75%;            /* Darker blue-tinted muted */
+    --muted-foreground: 220 50% 35%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 50% 98%;
-    --border: 210 50% 80%;           /* Stronger borders */
-    --input: 210 50% 85%;
-    --ring: 189 94% 38%;
+    --border: 215 45% 70%;           /* More visible borders */
+    --input: 215 40% 78%;
+    --ring: 189 94% 35%;
     --radius: 0.5rem;
   }
 
