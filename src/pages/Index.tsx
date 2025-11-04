@@ -249,18 +249,12 @@ const Index = () => {
         userCount={userCount}
       />
       
-      {/* Unified Section Headers */}
-      <div className="flex flex-col lg:flex-row items-stretch border-b border-border bg-card/30 backdrop-blur-sm">
-        <div className="flex-1 p-3 border-b lg:border-b-0 lg:border-r border-border">
-          <h2 className="text-sm font-semibold text-foreground">Text Content</h2>
-        </div>
-        <div className="flex-1 lg:w-[400px] xl:w-[480px] p-3">
-          <h2 className="text-sm font-semibold text-foreground">Media & Files</h2>
-        </div>
-      </div>
-      
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Text Content Section */}
         <div className="flex-1 border-b lg:border-b-0 lg:border-r border-border flex flex-col">
+          <div className="p-3 border-b border-border bg-card/30 backdrop-blur-sm">
+            <h2 className="text-sm font-semibold text-foreground">Text Content</h2>
+          </div>
           <TextEditor
             content={textContent}
             onChange={handleTextChange}
@@ -269,7 +263,11 @@ const Index = () => {
           />
         </div>
         
+        {/* Media & Files Section */}
         <div className="flex-1 lg:w-[400px] xl:w-[480px] flex flex-col">
+          <div className="p-3 border-b border-border bg-card/30 backdrop-blur-sm">
+            <h2 className="text-sm font-semibold text-foreground">Media & Files</h2>
+          </div>
           <MediaPanel
             items={mediaItems}
             onUpload={handleFileUpload}

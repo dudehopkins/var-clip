@@ -8,29 +8,29 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Gaming Theme - Light Mode (Day) */
-    --background: 210 40% 98%;
-    --foreground: 210 40% 10%;
-    --card: 210 40% 96%;
-    --card-foreground: 210 40% 15%;
-    --popover: 210 40% 98%;
-    --popover-foreground: 210 40% 10%;
+    /* Gaming Theme - Light Mode (Futuristic Day) - Cyber Blue/Purple Tint */
+    --background: 210 50% 95%;       /* Light blue-gray */
+    --foreground: 220 60% 15%;       /* Dark blue-black */
+    --card: 210 55% 92%;             /* Slightly darker with blue tint */
+    --card-foreground: 220 60% 20%;
+    --popover: 210 50% 95%;
+    --popover-foreground: 220 60% 15%;
     
-    /* Cyber Gaming Colors - Neon Cyan & Electric Purple */
-    --primary: 189 94% 43%;          /* Cyber Cyan */
-    --primary-foreground: 210 40% 98%;
-    --secondary: 265 89% 58%;        /* Electric Purple */
-    --secondary-foreground: 210 40% 98%;
-    --accent: 338 100% 56%;          /* Hot Pink accent */
-    --accent-foreground: 210 40% 98%;
+    /* Cyber Gaming Colors - Vibrant for Light Mode */
+    --primary: 189 94% 38%;          /* Deep Cyber Cyan */
+    --primary-foreground: 210 50% 98%;
+    --secondary: 265 89% 48%;        /* Deep Electric Purple */
+    --secondary-foreground: 210 50% 98%;
+    --accent: 338 100% 48%;          /* Deep Hot Pink */
+    --accent-foreground: 210 50% 98%;
     
-    --muted: 210 40% 92%;
-    --muted-foreground: 210 25% 45%;
+    --muted: 210 45% 88%;            /* Blue-tinted muted */
+    --muted-foreground: 220 40% 40%;
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 210 30% 85%;
-    --input: 210 30% 85%;
-    --ring: 189 94% 43%;
+    --destructive-foreground: 210 50% 98%;
+    --border: 210 50% 80%;           /* Stronger borders */
+    --input: 210 50% 85%;
+    --ring: 189 94% 38%;
     --radius: 0.5rem;
   }
 

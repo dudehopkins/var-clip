@@ -24,7 +24,7 @@ export const ClipboardHeader = ({ sessionCode, isConnected, userCount }: Clipboa
                style={{ boxShadow: 'var(--shadow-neon)' }}>
             <Clipboard className="w-5 h-5 text-primary animate-pulse" />
             <h1 className="text-xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-              ClipSync
+              varsclip
             </h1>
           </div>
           <button 
