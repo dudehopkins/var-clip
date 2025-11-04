@@ -185,4 +185,31 @@ All colors MUST be HSL.
   .animate-particle-float {
     animation: particle-float 15s linear infinite;
   }
+
+  /* Realistic bird wing flapping animation */
+  @keyframes wing-flap {
+    0%, 100% {
+      transform: rotateX(0deg);
+    }
+    50% {
+      transform: rotateX(-60deg);
+    }
+  }
+
+  @keyframes wing-flap-right {
+    0%, 100% {
+      transform: rotateX(0deg);
+    }
+    50% {
+      transform: rotateX(60deg);
+    }
+  }
+
+  .animate-wing-flap .wing-left {
+    animation: wing-flap 0.3s ease-in-out infinite;
+  }
+
+  .animate-wing-flap .wing-right {
+    animation: wing-flap-right 0.3s ease-in-out infinite;
+  }
 }

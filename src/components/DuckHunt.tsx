@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Bird } from "lucide-react";
 
 interface Duck {
   id: number;
@@ -8,7 +7,46 @@ interface Duck {
   speed: number;
   direction: "left" | "right";
   size: number;
+  color: string;
 }
+
+const RealisticBird = ({ size, color }: { size: number; color: string }) => {
+  return (
+    <svg
+      width={size}
+      height={size * 0.6}
+      viewBox="0 0 100 60"
+      className="animate-wing-flap"
+    >
+      {/* Bird Body */}
+      <ellipse cx="50" cy="35" rx="15" ry="20" fill={color} />
+      
+      {/* Bird Head */}
+      <circle cx="50" cy="20" r="12" fill={color} />
+      
+      {/* Beak */}
+      <polygon points="50,15 58,18 50,21" fill="#FFA500" />
+      
+      {/* Eye */}
+      <circle cx="53" cy="18" r="2" fill="#000" />
+      
+      {/* Left Wing - animated */}
+      <g className="wing-left" style={{ transformOrigin: "40px 35px" }}>
+        <ellipse cx="30" cy="35" rx="25" ry="12" fill={color} opacity="0.9" />
+        <path d="M 15,35 Q 20,30 30,32 Q 35,28 40,35" stroke={color} strokeWidth="2" fill="none" opacity="0.7" />
+      </g>
+      
+      {/* Right Wing - animated */}
+      <g className="wing-right" style={{ transformOrigin: "60px 35px" }}>
+        <ellipse cx="70" cy="35" rx="25" ry="12" fill={color} opacity="0.9" />
+        <path d="M 85,35 Q 80,30 70,32 Q 65,28 60,35" stroke={color} strokeWidth="2" fill="none" opacity="0.7" />
+      </g>
+      
+      {/* Tail */}
+      <path d="M 35,45 L 30,55 L 35,50 L 40,55 Z" fill={color} opacity="0.8" />
+    </svg>
+  );
+};
 
 export const DuckHunt = () => {
   const [ducks, setDucks] = useState<Duck[]>([]);
@@ -18,16 +56,18 @@ export const DuckHunt = () => {
   useEffect(() => {
     // Spawn ducks periodically
     const spawnInterval = setInterval(() => {
+      const birdColors = ["#8B4513", "#654321", "#4A4A4A", "#2C2C2C", "#5D4E37"];
       const newDuck: Duck = {
         id: Date.now(),
         x: Math.random() > 0.5 ? -50 : window.innerWidth + 50,
         y: Math.random() * (window.innerHeight * 0.7) + 50,
-        speed: Math.random() * 2 + 1.5,
+        speed: Math.random() * 2 + 2,
         direction: Math.random() > 0.5 ? "left" : "right",
-        size: Math.random() * 20 + 30,
+        size: Math.random() * 30 + 50,
+        color: birdColors[Math.floor(Math.random() * birdColors.length)],
       };
       setDucks((prev) => [...prev, newDuck]);
-    }, 3000);
+    }, 2500);
 
     return () => clearInterval(spawnInterval);
   }, []);
@@ -100,22 +140,16 @@ export const DuckHunt = () => {
         {ducks.map((duck) => (
           <div
             key={duck.id}
-            className="absolute pointer-events-auto cursor-crosshair transition-transform hover:scale-110"
+            className="absolute pointer-events-auto cursor-crosshair transition-all hover:scale-110"
             style={{
               left: `${duck.x}px`,
               top: `${duck.y}px`,
               transform: duck.direction === "left" ? "scaleX(-1)" : "scaleX(1)",
+              filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.3))",
             }}
             onClick={(e) => shootDuck(duck.id, e)}
           >
-            <Bird
-              className="text-secondary drop-shadow-lg animate-float"
-              style={{
-                width: `${duck.size}px`,
-                height: `${duck.size}px`,
-                filter: "drop-shadow(0 0 8px hsl(var(--secondary) / 0.6))",
-              }}
-            />
+            <RealisticBird size={duck.size} color={duck.color} />
           </div>
         ))}
       </div>
