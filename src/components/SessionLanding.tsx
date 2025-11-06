@@ -6,6 +6,7 @@ import { Clipboard, ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatedBackground } from "./AnimatedBackground";
 import { sessionCodeSchema } from "@/lib/validation";
+import { Footer } from "./Footer";
 
 export const SessionLanding = () => {
   const navigate = useNavigate();
@@ -103,6 +104,8 @@ export const SessionLanding = () => {
           </p>
         </div>
       </div>
+      
+      <Footer />
     </div>
   );
 };
