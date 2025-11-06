@@ -22,6 +22,7 @@ const Index = () => {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [isNewSession, setIsNewSession] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [isPublic, setIsPublic] = useState(true);
 
   // Check if session exists and requires password
   useEffect(() => {
@@ -34,7 +35,7 @@ const Index = () => {
       try {
         const { data: session, error } = await supabase
           .from("sessions")
-          .select("id, password_hash")
+          .select("id, password_hash, is_public")
           .eq("session_code", sessionCode)
           .single();
 
@@ -45,6 +46,9 @@ const Index = () => {
           setIsCheckingSession(false);
           return;
         }
+
+        // Update public status
+        setIsPublic(session.is_public);
 
         if (session.password_hash) {
           // Protected session - check if token exists and is valid
@@ -82,6 +86,25 @@ const Index = () => {
 
     checkSession();
   }, [sessionCode]);
+
+  const handleSettingsUpdated = async () => {
+    // Refresh session data after settings update
+    if (!sessionCode) return;
+    
+    try {
+      const { data: session } = await supabase
+        .from("sessions")
+        .select("is_public")
+        .eq("session_code", sessionCode)
+        .single();
+      
+      if (session) {
+        setIsPublic(session.is_public);
+      }
+    } catch (error) {
+      console.error("Error refreshing session data:", error);
+    }
+  };
 
   const handlePasswordSubmit = async (password: string | null, isProtected: boolean) => {
     if (!sessionCode) return;
@@ -257,6 +280,8 @@ const Index = () => {
         sessionCode={sessionCode}
         isConnected={isConnected}
         userCount={userCount}
+        isPublic={isPublic}
+        onSettingsUpdated={handleSettingsUpdated}
       />
       
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">

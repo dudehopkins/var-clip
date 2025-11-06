@@ -2,3 +2,6 @@ project_id = "bcjechewkjygyjoczcri"
 
 [functions.verify-session-password]
 verify_jwt = false
+
+[functions.update-session-settings]
+verify_jwt = false

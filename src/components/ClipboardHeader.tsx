@@ -1,14 +1,17 @@
 import { Clipboard, Users, Share2, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "./ThemeToggle";
+import { SessionSettings } from "./SessionSettings";
 
 interface ClipboardHeaderProps {
   sessionCode: string;
   isConnected: boolean;
   userCount: number;
+  isPublic: boolean;
+  onSettingsUpdated: () => void;
 }
 
-export const ClipboardHeader = ({ sessionCode, isConnected, userCount }: ClipboardHeaderProps) => {
+export const ClipboardHeader = ({ sessionCode, isConnected, userCount, isPublic, onSettingsUpdated }: ClipboardHeaderProps) => {
   const handleShare = () => {
     const url = `${window.location.origin}/${sessionCode}`;
     navigator.clipboard.writeText(url);
@@ -38,6 +41,11 @@ export const ClipboardHeader = ({ sessionCode, isConnected, userCount }: Clipboa
         </div>
         
         <div className="flex items-center gap-4">
+          <SessionSettings 
+            sessionCode={sessionCode} 
+            isPublic={isPublic}
+            onSettingsUpdated={onSettingsUpdated}
+          />
           <ThemeToggle />
           
           <div className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg bg-card/50 border border-border">
