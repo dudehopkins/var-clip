@@ -34,23 +34,7 @@ export const fileSchema = z.object({
   size: z
     .number()
     .max(10 * 1024 * 1024, "File size exceeds 10MB limit"),
-  type: z.string().refine(
-    (type) => {
-      // Allow common file types
-      const allowedTypes = [
-        "image/jpeg",
-        "image/png",
-        "image/gif",
-        "image/webp",
-        "application/pdf",
-        "text/plain",
-        "application/json",
-        "application/zip",
-      ];
-      return allowedTypes.includes(type) || type.startsWith("image/");
-    },
-    "File type not allowed"
-  ),
+  type: z.string(), // Allow any file type
 });
 
 // Session creation validation
