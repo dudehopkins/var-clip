@@ -173,19 +173,19 @@ export const MediaPanel = ({ items, onUpload, onRemove, onDownload, uploadProgre
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute top-2 right-2 flex gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                       <Button
                         size="icon"
                         variant="secondary"
-                        className="h-8 w-8 bg-background/80 backdrop-blur-sm hover:bg-background"
+                        className="h-8 w-8 bg-background/95 backdrop-blur-sm hover:bg-background shadow-lg border border-border/50"
                         onClick={() => onDownload(item.url, item.name || "image")}
                       >
-                        <Download className="w-4 h-4" />
+                        <Download className="w-4 h-4 text-foreground" />
                       </Button>
                       <Button
                         size="icon"
                         variant="destructive"
-                        className="h-8 w-8"
+                        className="h-8 w-8 shadow-lg"
                         onClick={() => onRemove(item.id)}
                       >
                         <Trash2 className="w-4 h-4" />
