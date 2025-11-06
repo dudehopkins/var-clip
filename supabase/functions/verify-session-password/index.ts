@@ -1,9 +1,76 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import * as bcrypt from 'https://deno.land/x/bcrypt@v0.2.4/mod.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+// Password hashing using Web Crypto API (PBKDF2)
+async function hashPassword(password: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const passwordBuffer = new TextEncoder().encode(password);
+  
+  const key = await crypto.subtle.importKey(
+    'raw',
+    passwordBuffer,
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits']
+  );
+  
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: salt,
+      iterations: 100000,
+      hash: 'SHA-256',
+    },
+    key,
+    256
+  );
+  
+  const hashArray = new Uint8Array(derivedBits);
+  const saltBase64 = btoa(String.fromCharCode(...salt));
+  const hashBase64 = btoa(String.fromCharCode(...hashArray));
+  
+  return `${saltBase64}:${hashBase64}`;
+}
+
+async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  const [saltBase64, hashBase64] = storedHash.split(':');
+  const salt = Uint8Array.from(atob(saltBase64), c => c.charCodeAt(0));
+  const storedHashArray = Uint8Array.from(atob(hashBase64), c => c.charCodeAt(0));
+  
+  const passwordBuffer = new TextEncoder().encode(password);
+  
+  const key = await crypto.subtle.importKey(
+    'raw',
+    passwordBuffer,
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits']
+  );
+  
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: salt,
+      iterations: 100000,
+      hash: 'SHA-256',
+    },
+    key,
+    256
+  );
+  
+  const hashArray = new Uint8Array(derivedBits);
+  
+  // Constant-time comparison
+  if (hashArray.length !== storedHashArray.length) return false;
+  let result = 0;
+  for (let i = 0; i < hashArray.length; i++) {
+    result |= hashArray[i] ^ storedHashArray[i];
+  }
+  return result === 0;
 }
 
 Deno.serve(async (req) => {
@@ -93,7 +160,7 @@ Deno.serve(async (req) => {
       }
 
       // Hash password server-side if provided
-      const passwordHash = password ? await bcrypt.hash(password) : null
+      const passwordHash = password ? await hashPassword(password) : null
 
       // Create new session
       const { data: newSession, error: createError } = await supabaseClient
@@ -177,7 +244,7 @@ Deno.serve(async (req) => {
       }
 
       // Verify password server-side
-      const isValid = await bcrypt.compare(password, session.password_hash)
+      const isValid = await verifyPassword(password, session.password_hash)
 
       if (!isValid) {
         return new Response(
