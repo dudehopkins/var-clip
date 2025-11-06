@@ -134,7 +134,7 @@ const Index = () => {
 
   // Initialize hooks first (hooks must be called unconditionally)
   const { isConnected, userCount, items, addTextItem, addFileItem, removeItem, clearText, uploadProgress, isUploading } =
-    useRealtimeSession(sessionCode || "");
+    useRealtimeSession(sessionCode || "", isAuthenticated);
   
   // Sync text content from items (only when not actively typing)
   useEffect(() => {

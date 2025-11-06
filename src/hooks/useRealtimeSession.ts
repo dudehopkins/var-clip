@@ -15,7 +15,7 @@ interface SessionItem {
   created_at: string;
 }
 
-export const useRealtimeSession = (sessionCode: string) => {
+export const useRealtimeSession = (sessionCode: string, isAuthenticated: boolean = true) => {
   const [isConnected, setIsConnected] = useState(false);
   const [userCount, setUserCount] = useState(1);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -26,8 +26,10 @@ export const useRealtimeSession = (sessionCode: string) => {
 
   // Initialize or join session
   useEffect(() => {
+    if (!sessionCode || !isAuthenticated) return;
+
     const initSession = async () => {
-      // Check if session exists
+      // Only check if session exists, don't create it
       const { data: existingSession } = await supabase
         .from("sessions")
         .select("id")
@@ -47,25 +49,11 @@ export const useRealtimeSession = (sessionCode: string) => {
         if (sessionItems) {
           setItems(sessionItems as SessionItem[]);
         }
-      } else {
-        // Create new session
-        const { data: newSession, error } = await supabase
-          .from("sessions")
-          .insert({ session_code: sessionCode })
-          .select("id")
-          .single();
-
-        if (error) {
-          toast.error("Failed to create session");
-          return;
-        }
-
-        setSessionId(newSession.id);
       }
     };
 
     initSession();
-  }, [sessionCode]);
+  }, [sessionCode, isAuthenticated]);
 
   // Set up realtime subscription
   useEffect(() => {
