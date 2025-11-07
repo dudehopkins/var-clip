@@ -18,10 +18,11 @@ import { supabase } from "@/integrations/supabase/client";
 interface SessionSettingsProps {
   sessionCode: string;
   isPublic: boolean;
+  isAuthenticated: boolean;
   onSettingsUpdated: () => void;
 }
 
-export const SessionSettings = ({ sessionCode, isPublic, onSettingsUpdated }: SessionSettingsProps) => {
+export const SessionSettings = ({ sessionCode, isPublic, isAuthenticated, onSettingsUpdated }: SessionSettingsProps) => {
   const [open, setOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -31,7 +32,8 @@ export const SessionSettings = ({ sessionCode, isPublic, onSettingsUpdated }: Se
   const handleUpdateSettings = async () => {
     const token = sessionStorage.getItem(`session_token_${sessionCode}`);
     
-    if (!token) {
+    // For protected sessions, require authentication
+    if (!isPublic && !token) {
       toast.error("You must be authenticated to change session settings");
       return;
     }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTheme } from "./ThemeProvider";
 
 interface CursorPosition {
   x: number;
@@ -7,9 +8,15 @@ interface CursorPosition {
 }
 
 export const CustomCursor = () => {
+  const { theme } = useTheme();
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [trail, setTrail] = useState<CursorPosition[]>([]);
   const [isMoving, setIsMoving] = useState(false);
+  
+  // Dynamic colors based on theme
+  const primaryColor = theme === "light" ? "220 90% 50%" : "var(--primary)";
+  const secondaryColor = theme === "light" ? "280 90% 60%" : "var(--secondary)";
+  const accentColor = theme === "light" ? "340 90% 55%" : "var(--accent)";
 
   useEffect(() => {
     let movementTimer: NodeJS.Timeout;
@@ -78,11 +85,11 @@ export const CustomCursor = () => {
               className="w-4 h-4 rounded-full"
               style={{
                 background: `radial-gradient(circle, 
-                  hsl(var(--primary)) 0%, 
-                  hsl(var(--secondary)) 50%, 
+                  hsl(${primaryColor}) 0%, 
+                  hsl(${secondaryColor}) 50%, 
                   transparent 70%)`,
-                boxShadow: `0 0 10px hsl(var(--primary) / ${opacity * 0.8}),
-                           0 0 20px hsl(var(--secondary) / ${opacity * 0.4})`,
+                boxShadow: `0 0 10px hsl(${primaryColor} / ${opacity * 0.8}),
+                           0 0 20px hsl(${secondaryColor} / ${opacity * 0.4})`,
               }}
             />
           </div>
@@ -104,9 +111,9 @@ export const CustomCursor = () => {
             isMoving ? 'animate-ping' : ''
           }`}
           style={{
-            borderColor: 'hsl(var(--primary))',
-            boxShadow: `0 0 20px hsl(var(--primary) / 0.6),
-                       0 0 40px hsl(var(--secondary) / 0.4)`,
+            borderColor: `hsl(${primaryColor})`,
+            boxShadow: `0 0 20px hsl(${primaryColor} / 0.6),
+                       0 0 40px hsl(${secondaryColor} / 0.4)`,
           }}
         />
 
@@ -116,7 +123,7 @@ export const CustomCursor = () => {
             <div
               className="absolute w-8 h-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 animate-pulse"
               style={{
-                borderColor: 'hsl(var(--accent))',
+                borderColor: `hsl(${accentColor})`,
                 transform: `translate(calc(-50% + ${Math.sin(Date.now() / 100) * 3}px), calc(-50% + ${Math.cos(Date.now() / 100) * 3}px))`,
                 opacity: 0.5,
               }}
@@ -124,7 +131,7 @@ export const CustomCursor = () => {
             <div
               className="absolute w-8 h-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 animate-pulse"
               style={{
-                borderColor: 'hsl(var(--secondary))',
+                borderColor: `hsl(${secondaryColor})`,
                 transform: `translate(calc(-50% - ${Math.sin(Date.now() / 80) * 2}px), calc(-50% - ${Math.cos(Date.now() / 80) * 2}px))`,
                 opacity: 0.4,
               }}
@@ -136,35 +143,39 @@ export const CustomCursor = () => {
         <div
           className="absolute w-2 h-2 -translate-x-1/2 -translate-y-1/2 rounded-full"
           style={{
-            background: 'hsl(var(--primary))',
-            boxShadow: `0 0 10px hsl(var(--primary)),
-                       0 0 20px hsl(var(--primary) / 0.5)`,
+            background: `hsl(${primaryColor})`,
+            boxShadow: `0 0 10px hsl(${primaryColor}),
+                       0 0 20px hsl(${primaryColor} / 0.5)`,
           }}
         />
 
         {/* Crosshair lines */}
         <div
-          className="absolute w-0.5 h-4 -translate-x-1/2 bg-primary -top-6"
+          className="absolute w-0.5 h-4 -translate-x-1/2 -top-6"
           style={{
-            boxShadow: `0 0 5px hsl(var(--primary))`,
+            background: `hsl(${primaryColor})`,
+            boxShadow: `0 0 5px hsl(${primaryColor})`,
           }}
         />
         <div
-          className="absolute w-0.5 h-4 -translate-x-1/2 bg-primary top-2"
+          className="absolute w-0.5 h-4 -translate-x-1/2 top-2"
           style={{
-            boxShadow: `0 0 5px hsl(var(--primary))`,
+            background: `hsl(${primaryColor})`,
+            boxShadow: `0 0 5px hsl(${primaryColor})`,
           }}
         />
         <div
-          className="absolute w-4 h-0.5 -translate-y-1/2 bg-primary -left-6"
+          className="absolute w-4 h-0.5 -translate-y-1/2 -left-6"
           style={{
-            boxShadow: `0 0 5px hsl(var(--primary))`,
+            background: `hsl(${primaryColor})`,
+            boxShadow: `0 0 5px hsl(${primaryColor})`,
           }}
         />
         <div
-          className="absolute w-4 h-0.5 -translate-y-1/2 bg-primary left-2"
+          className="absolute w-4 h-0.5 -translate-y-1/2 left-2"
           style={{
-            boxShadow: `0 0 5px hsl(var(--primary))`,
+            background: `hsl(${primaryColor})`,
+            boxShadow: `0 0 5px hsl(${primaryColor})`,
           }}
         />
       </div>

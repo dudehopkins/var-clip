@@ -8,10 +8,11 @@ interface ClipboardHeaderProps {
   isConnected: boolean;
   userCount: number;
   isPublic: boolean;
+  isAuthenticated: boolean;
   onSettingsUpdated: () => void;
 }
 
-export const ClipboardHeader = ({ sessionCode, isConnected, userCount, isPublic, onSettingsUpdated }: ClipboardHeaderProps) => {
+export const ClipboardHeader = ({ sessionCode, isConnected, userCount, isPublic, isAuthenticated, onSettingsUpdated }: ClipboardHeaderProps) => {
   const handleShare = () => {
     const url = `${window.location.origin}/${sessionCode}`;
     navigator.clipboard.writeText(url);
@@ -44,6 +45,7 @@ export const ClipboardHeader = ({ sessionCode, isConnected, userCount, isPublic,
           <SessionSettings 
             sessionCode={sessionCode} 
             isPublic={isPublic}
+            isAuthenticated={isAuthenticated}
             onSettingsUpdated={onSettingsUpdated}
           />
           <ThemeToggle />

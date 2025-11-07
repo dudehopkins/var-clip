@@ -6,11 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Lock, Unlock } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { passwordSchema } from "@/lib/validation";
+import { SessionDurationSelector } from "./SessionDurationSelector";
 
 interface SessionPasswordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (password: string | null, isProtected: boolean) => void;
+  onSubmit: (password: string | null, isProtected: boolean, durationMinutes?: number | null) => void;
   isNewSession?: boolean;
 }
 
@@ -24,6 +25,7 @@ export const SessionPasswordDialog = ({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isProtected, setIsProtected] = useState(false);
   const [error, setError] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState<number | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,10 +50,11 @@ export const SessionPasswordDialog = ({
       }
     }
 
-    onSubmit(isProtected ? password : null, isProtected);
+    onSubmit(isProtected ? password : null, isProtected, durationMinutes);
     setPassword("");
     setConfirmPassword("");
     setIsProtected(false);
+    setDurationMinutes(null);
     onOpenChange(false);
   };
 
@@ -81,18 +84,22 @@ export const SessionPasswordDialog = ({
         
         <form onSubmit={handleSubmit} className="space-y-4">
           {isNewSession && (
-            <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/30">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-medium">Password Protection</Label>
-                <p className="text-xs text-muted-foreground">
-                  Require password to access this session
-                </p>
+            <>
+              <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/30">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">Password Protection</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Require password to access this session
+                  </p>
+                </div>
+                <Switch
+                  checked={isProtected}
+                  onCheckedChange={setIsProtected}
+                />
               </div>
-              <Switch
-                checked={isProtected}
-                onCheckedChange={setIsProtected}
-              />
-            </div>
+
+              <SessionDurationSelector onDurationSelect={setDurationMinutes} />
+            </>
           )}
 
           {(isProtected || !isNewSession) && (

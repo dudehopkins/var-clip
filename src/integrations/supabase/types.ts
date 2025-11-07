@@ -122,6 +122,7 @@ export type Database = {
       sessions: {
         Row: {
           created_at: string
+          expires_at: string | null
           id: string
           is_public: boolean
           last_activity: string
@@ -130,6 +131,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          expires_at?: string | null
           id?: string
           is_public?: boolean
           last_activity?: string
@@ -138,6 +140,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          expires_at?: string | null
           id?: string
           is_public?: boolean
           last_activity?: string

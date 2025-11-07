@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { sessionCode, password, isCreating } = await req.json()
+    const { sessionCode, password, isCreating, durationMinutes } = await req.json()
 
     // Initialize Supabase client
     const supabaseClient = createClient(
@@ -161,6 +161,13 @@ Deno.serve(async (req) => {
 
       // Hash password server-side if provided
       const passwordHash = password ? await hashPassword(password) : null
+      
+      // Calculate expiration time if duration is provided
+      let expiresAt = null
+      if (durationMinutes && durationMinutes > 0) {
+        const now = new Date()
+        expiresAt = new Date(now.getTime() + durationMinutes * 60000).toISOString()
+      }
 
       // Create new session
       const { data: newSession, error: createError } = await supabaseClient
@@ -169,6 +176,7 @@ Deno.serve(async (req) => {
           session_code: sessionCode,
           password_hash: passwordHash,
           is_public: !password, // Public if no password
+          expires_at: expiresAt,
         })
         .select()
         .single()

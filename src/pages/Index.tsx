@@ -118,7 +118,7 @@ const Index = () => {
     }
   };
 
-  const handlePasswordSubmit = async (password: string | null, isProtected: boolean) => {
+  const handlePasswordSubmit = async (password: string | null, isProtected: boolean, durationMinutes?: number | null) => {
     if (!sessionCode) return;
 
     try {
@@ -128,6 +128,7 @@ const Index = () => {
           sessionCode,
           password: isProtected ? password : null,
           isCreating: isNewSession,
+          durationMinutes: durationMinutes,
         },
       });
 
@@ -304,6 +305,7 @@ const Index = () => {
         isConnected={isConnected}
         userCount={userCount}
         isPublic={isPublic}
+        isAuthenticated={isAuthenticated}
         onSettingsUpdated={handleSettingsUpdated}
       />
       
