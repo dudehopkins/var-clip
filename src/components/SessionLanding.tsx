@@ -44,7 +44,7 @@ export const SessionLanding = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
       <AnimatedBackground />
-      <div className="w-full max-w-md space-y-8 animate-fade-in relative z-10">
+      <div className="w-full max-w-md mx-auto space-y-8 animate-fade-in relative z-10">
         <div className="text-center space-y-3">
           <div className="flex justify-center">
             <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 inline-block animate-glow-pulse">

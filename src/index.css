@@ -68,12 +68,12 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground font-rajdhani;
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="%2300d9ff" stroke-width="2" fill="none"/><circle cx="12" cy="12" r="2" fill="%2300d9ff"/><line x1="12" y1="4" x2="12" y2="8" stroke="%2300d9ff" stroke-width="2"/><line x1="12" y1="16" x2="12" y2="20" stroke="%2300d9ff" stroke-width="2"/><line x1="4" y1="12" x2="8" y2="12" stroke="%2300d9ff" stroke-width="2"/><line x1="16" y1="12" x2="20" y2="12" stroke="%2300d9ff" stroke-width="2"/></svg>') 12 12, crosshair;
+    cursor: none;
   }
   
-  /* Gaming crosshair cursor for clickable elements */
-  button, a, [role="button"], input[type="button"], input[type="submit"] {
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="%23ff00ff" stroke-width="2.5" fill="none" opacity="0.6"/><circle cx="12" cy="12" r="3" fill="%23ff00ff"/><line x1="12" y1="2" x2="12" y2="7" stroke="%23ff00ff" stroke-width="2.5"/><line x1="12" y1="17" x2="12" y2="22" stroke="%23ff00ff" stroke-width="2.5"/><line x1="2" y1="12" x2="7" y2="12" stroke="%23ff00ff" stroke-width="2.5"/><line x1="17" y1="12" x2="22" y2="12" stroke="%23ff00ff" stroke-width="2.5"/></svg>') 12 12, pointer;
+  /* Hide default cursor for all elements */
+  *, button, a, [role="button"], input[type="button"], input[type="submit"] {
+    cursor: none !important;
   }
 
   /* Gaming Scrollbar */
