@@ -92,14 +92,26 @@ const Index = () => {
     if (!sessionCode) return;
     
     try {
+      // Clear token if settings changed
+      sessionStorage.removeItem(`session_token_${sessionCode}`);
+      
       const { data: session } = await supabase
         .from("sessions")
-        .select("is_public")
+        .select("is_public, password_hash")
         .eq("session_code", sessionCode)
         .single();
       
       if (session) {
         setIsPublic(session.is_public);
+        
+        // If session now requires password, show dialog
+        if (session.password_hash) {
+          setIsAuthenticated(false);
+          setShowPasswordDialog(true);
+        } else {
+          // Public session, mark as authenticated
+          setIsAuthenticated(true);
+        }
       }
     } catch (error) {
       console.error("Error refreshing session data:", error);
@@ -137,6 +149,17 @@ const Index = () => {
         // Store server-validated token if provided
         if (data.token) {
           sessionStorage.setItem(`session_token_${sessionCode}`, data.token);
+        }
+        
+        // Refresh session data to get latest state
+        const { data: session } = await supabase
+          .from("sessions")
+          .select("is_public")
+          .eq("session_code", sessionCode)
+          .single();
+        
+        if (session) {
+          setIsPublic(session.is_public);
         }
         
         setIsAuthenticated(true);

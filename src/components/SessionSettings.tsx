@@ -95,14 +95,13 @@ export const SessionSettings = ({ sessionCode, isPublic, onSettingsUpdated }: Se
           return;
         }
 
-        sessionStorage.removeItem(`session_token_${sessionCode}`);
         toast.success("Password updated! You'll need to re-authenticate.");
         setOpen(false);
         setNewPassword("");
         setConfirmPassword("");
         
-        // Reload page to trigger re-authentication
-        window.location.reload();
+        // Trigger re-authentication without full reload
+        onSettingsUpdated();
       } catch (error) {
         console.error("Error updating settings:", error);
         toast.error("Failed to update password");
