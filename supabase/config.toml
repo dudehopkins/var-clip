@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.update-session-settings]
 verify_jwt = false
+
+[functions.cleanup-expired-session]
+verify_jwt = false

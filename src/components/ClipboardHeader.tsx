@@ -2,6 +2,7 @@ import { Clipboard, Users, Share2, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "./ThemeToggle";
 import { SessionSettings } from "./SessionSettings";
+import { SessionCountdown } from "./SessionCountdown";
 
 interface ClipboardHeaderProps {
   sessionCode: string;
@@ -42,6 +43,8 @@ export const ClipboardHeader = ({ sessionCode, isConnected, userCount, isPublic,
         </div>
         
         <div className="flex items-center gap-4">
+          <SessionCountdown sessionCode={sessionCode} />
+          
           <SessionSettings 
             sessionCode={sessionCode} 
             isPublic={isPublic}

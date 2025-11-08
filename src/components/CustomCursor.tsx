@@ -13,10 +13,10 @@ export const CustomCursor = () => {
   const [trail, setTrail] = useState<CursorPosition[]>([]);
   const [isMoving, setIsMoving] = useState(false);
   
-  // Dynamic colors based on theme
-  const primaryColor = theme === "light" ? "220 90% 50%" : "var(--primary)";
-  const secondaryColor = theme === "light" ? "280 90% 60%" : "var(--secondary)";
-  const accentColor = theme === "light" ? "340 90% 55%" : "var(--accent)";
+  // Dynamic colors based on theme - darker and more visible in light mode
+  const primaryColor = theme === "light" ? "260 70% 40%" : "var(--primary)";
+  const secondaryColor = theme === "light" ? "280 80% 45%" : "var(--secondary)";
+  const accentColor = theme === "light" ? "300 75% 50%" : "var(--accent)";
 
   useEffect(() => {
     let movementTimer: NodeJS.Timeout;
