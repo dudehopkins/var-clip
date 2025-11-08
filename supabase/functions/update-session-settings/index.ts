@@ -58,9 +58,9 @@ Deno.serve(async (req) => {
     )
 
     // Validate inputs
-    if (!sessionCode || !token) {
+    if (!sessionCode) {
       return new Response(
-        JSON.stringify({ error: 'Session code and token are required' }),
+        JSON.stringify({ error: 'Session code is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -79,17 +79,24 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Verify token is valid for this session
-    const { data: tokenData, error: tokenError } = await supabaseClient
-      .from('session_tokens')
-      .select('expires_at')
-      .eq('token', token)
-      .eq('session_id', session.id)
-      .single()
+    // For protected sessions, verify token
+    if (!session.is_public && token) {
+      const { data: tokenData, error: tokenError } = await supabaseClient
+        .from('session_tokens')
+        .select('expires_at')
+        .eq('token', token)
+        .eq('session_id', session.id)
+        .single()
 
-    if (tokenError || !tokenData || new Date(tokenData.expires_at) <= new Date()) {
+      if (tokenError || !tokenData || new Date(tokenData.expires_at) <= new Date()) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid or expired token' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    } else if (!session.is_public && !token) {
       return new Response(
-        JSON.stringify({ error: 'Invalid or expired token' }),
+        JSON.stringify({ error: 'Token required for protected sessions' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

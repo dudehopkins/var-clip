@@ -38,6 +38,58 @@ export type Database = {
             foreignKeyName: "session_access_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
+            referencedRelation: "session_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_access_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_analytics: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          session_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          session_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          session_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_analytics_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_analytics_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
             referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
@@ -82,6 +134,13 @@ export type Database = {
             foreignKeyName: "session_items_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
+            referencedRelation: "session_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_items_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
             referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
@@ -110,6 +169,13 @@ export type Database = {
           token?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "session_tokens_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_stats"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "session_tokens_session_id_fkey"
             columns: ["session_id"]
@@ -149,19 +215,80 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      session_stats: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          file_items: number | null
+          id: string | null
+          image_items: number | null
+          is_public: boolean | null
+          last_activity: string | null
+          session_code: string | null
+          text_items: number | null
+          total_data_bytes: number | null
+          total_items: number | null
+          unique_visitors: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       generate_session_code: { Args: never; Returns: string }
+      get_session_stats: {
+        Args: never
+        Returns: {
+          created_at: string
+          expires_at: string
+          file_items: number
+          id: string
+          image_items: number
+          is_public: boolean
+          last_activity: string
+          session_code: string
+          text_items: number
+          total_data_bytes: number
+          total_items: number
+          unique_visitors: number
+        }[]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_session_access: {
         Args: { p_email: string; p_session_id: string }
         Returns: boolean
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -288,6 +415,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const

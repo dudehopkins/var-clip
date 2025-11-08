@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { ThemeToggle } from "./ThemeToggle";
 import { SessionSettings } from "./SessionSettings";
 import { SessionCountdown } from "./SessionCountdown";
+import { SessionActions } from "./SessionActions";
 
 interface ClipboardHeaderProps {
   sessionCode: string;
@@ -10,10 +11,11 @@ interface ClipboardHeaderProps {
   userCount: number;
   isPublic: boolean;
   isAuthenticated: boolean;
+  expiresAt: string | null;
   onSettingsUpdated: () => void;
 }
 
-export const ClipboardHeader = ({ sessionCode, isConnected, userCount, isPublic, isAuthenticated, onSettingsUpdated }: ClipboardHeaderProps) => {
+export const ClipboardHeader = ({ sessionCode, isConnected, userCount, isPublic, isAuthenticated, expiresAt, onSettingsUpdated }: ClipboardHeaderProps) => {
   const handleShare = () => {
     const url = `${window.location.origin}/${sessionCode}`;
     navigator.clipboard.writeText(url);
@@ -44,6 +46,11 @@ export const ClipboardHeader = ({ sessionCode, isConnected, userCount, isPublic,
         
         <div className="flex items-center gap-4">
           <SessionCountdown sessionCode={sessionCode} />
+          
+          <SessionActions 
+            sessionCode={sessionCode}
+            expiresAt={expiresAt}
+          />
           
           <SessionSettings 
             sessionCode={sessionCode} 

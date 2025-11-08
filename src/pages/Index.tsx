@@ -7,6 +7,7 @@ import { SessionLanding } from "@/components/SessionLanding";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { AdvancedGraphics } from "@/components/AdvancedGraphics";
 import { SessionPasswordDialog } from "@/components/SessionPasswordDialog";
+import { SessionAnalytics } from "@/components/SessionAnalytics";
 import { useRealtimeSession } from "@/hooks/useRealtimeSession";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -23,6 +24,7 @@ const Index = () => {
   const [isNewSession, setIsNewSession] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [isPublic, setIsPublic] = useState(true);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
 
   // Check if session exists and requires password
   useEffect(() => {
@@ -35,7 +37,7 @@ const Index = () => {
       try {
         const { data: session, error } = await supabase
           .from("sessions")
-          .select("id, password_hash, is_public")
+          .select("id, password_hash, is_public, expires_at")
           .eq("session_code", sessionCode)
           .single();
 
@@ -47,8 +49,9 @@ const Index = () => {
           return;
         }
 
-        // Update public status
+        // Update public status and expiration
         setIsPublic(session.is_public);
+        setExpiresAt(session.expires_at);
 
         if (session.password_hash) {
           // Protected session - check if token exists and is valid
@@ -97,12 +100,13 @@ const Index = () => {
       
       const { data: session } = await supabase
         .from("sessions")
-        .select("is_public, password_hash")
+        .select("is_public, password_hash, expires_at")
         .eq("session_code", sessionCode)
         .single();
       
       if (session) {
         setIsPublic(session.is_public);
+        setExpiresAt(session.expires_at);
         
         // If session now requires password, show dialog
         if (session.password_hash) {
@@ -155,12 +159,13 @@ const Index = () => {
         // Refresh session data to get latest state
         const { data: session } = await supabase
           .from("sessions")
-          .select("is_public")
+          .select("is_public, expires_at")
           .eq("session_code", sessionCode)
           .single();
         
         if (session) {
           setIsPublic(session.is_public);
+          setExpiresAt(session.expires_at);
         }
         
         setIsAuthenticated(true);
@@ -182,6 +187,19 @@ const Index = () => {
   // Initialize hooks first (hooks must be called unconditionally)
   const { isConnected, userCount, items, addTextItem, addFileItem, removeItem, clearText, uploadProgress, isUploading } =
     useRealtimeSession(sessionCode || "", isAuthenticated);
+
+  // Track analytics when session is accessed
+  useEffect(() => {
+    if (sessionCode && isAuthenticated) {
+      supabase.functions.invoke('track-analytics', {
+        body: {
+          sessionCode,
+          action: 'session_accessed',
+          metadata: { timestamp: new Date().toISOString() }
+        }
+      });
+    }
+  }, [sessionCode, isAuthenticated]);
   
   // Sync text content from items (only when not actively typing)
   useEffect(() => {
@@ -306,6 +324,7 @@ const Index = () => {
         userCount={userCount}
         isPublic={isPublic}
         isAuthenticated={isAuthenticated}
+        expiresAt={expiresAt}
         onSettingsUpdated={handleSettingsUpdated}
       />
       
@@ -336,6 +355,11 @@ const Index = () => {
             uploadProgress={uploadProgress}
             isUploading={isUploading}
           />
+          
+          {/* Session Analytics in sidebar */}
+          <div className="p-4 border-t border-border">
+            <SessionAnalytics sessionCode={sessionCode} />
+          </div>
         </div>
       </main>
       

@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.cleanup-expired-session]
 verify_jwt = false
+
+[functions.extend-session]
+verify_jwt = false
+
+[functions.track-analytics]
+verify_jwt = false

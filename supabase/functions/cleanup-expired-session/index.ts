@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { sessionCode } = await req.json()
+    const { sessionCode, forceDelete } = await req.json()
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -38,8 +38,8 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Check if session is expired
-    if (session.expires_at && new Date(session.expires_at) > new Date()) {
+    // Check if session is expired (skip if force delete)
+    if (!forceDelete && session.expires_at && new Date(session.expires_at) > new Date()) {
       return new Response(
         JSON.stringify({ error: 'Session has not expired yet' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
