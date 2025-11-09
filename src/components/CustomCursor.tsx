@@ -12,11 +12,23 @@ export const CustomCursor = () => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [trail, setTrail] = useState<CursorPosition[]>([]);
   const [isMoving, setIsMoving] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   
-  // Dynamic colors based on theme - darker and more visible in light mode
-  const primaryColor = theme === "light" ? "260 70% 40%" : "var(--primary)";
-  const secondaryColor = theme === "light" ? "280 80% 45%" : "var(--secondary)";
-  const accentColor = theme === "light" ? "300 75% 50%" : "var(--accent)";
+  // Detect mobile on mount
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    };
+    checkMobile();
+  }, []);
+  
+  // Dynamic colors based on theme - much darker in light mode
+  const primaryColor = theme === "light" ? "260 80% 25%" : "var(--primary)";
+  const secondaryColor = theme === "light" ? "280 85% 30%" : "var(--secondary)";
+  const accentColor = theme === "light" ? "300 80% 35%" : "var(--accent)";
+  
+  // Don't render on mobile devices
+  if (isMobile) return null;
 
   useEffect(() => {
     let movementTimer: NodeJS.Timeout;
