@@ -50,9 +50,18 @@ export const SessionAnalytics = ({ sessionCode }: SessionAnalyticsProps) => {
 
     fetchAnalytics();
 
-    // Subscribe to real-time updates
+    // Subscribe to real-time updates on session_items
     const channel = supabase
-      .channel('analytics-updates')
+      .channel('session-analytics-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'session_items'
+        },
+        () => fetchAnalytics()
+      )
       .on(
         'postgres_changes',
         {

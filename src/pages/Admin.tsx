@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { Shield, Activity, Database, Clock, Users } from "lucide-react";
+import { Shield, Activity, Database, Clock, Users, Trash2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface SessionStat {
@@ -38,6 +39,8 @@ const Admin = () => {
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<SessionStat[]>([]);
   const [recentActivity, setRecentActivity] = useState<AnalyticsEvent[]>([]);
+  const [selectedSessions, setSelectedSessions] = useState<string[]>([]);
+  const [deletingSession, setDeletingSession] = useState<string | null>(null);
 
   useEffect(() => {
     checkAdminAccess();
@@ -49,9 +52,9 @@ const Admin = () => {
       // In production, this should be replaced with proper authentication
       const adminToken = localStorage.getItem('admin_token');
       
-      if (adminToken !== 'VARS_ADMIN_2024') {
+      if (adminToken !== 'admin@clip4all2002') {
         const token = prompt('Enter admin password:');
-        if (token === 'VARS_ADMIN_2024') {
+        if (token === 'admin@clip4all2002') {
           localStorage.setItem('admin_token', token);
           setIsAdmin(true);
           fetchDashboardData();
@@ -97,6 +100,61 @@ const Admin = () => {
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast.error('Failed to load dashboard data');
+    }
+  };
+
+  const handleDeleteSession = async (sessionCode: string) => {
+    if (!confirm(`Are you sure you want to delete session "${sessionCode}"?`)) return;
+    
+    setDeletingSession(sessionCode);
+    try {
+      const { error } = await supabase.functions.invoke('cleanup-expired-session', {
+        body: { sessionCode, forceDelete: true }
+      });
+
+      if (error) throw error;
+      toast.success('Session deleted successfully');
+      fetchDashboardData();
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      toast.error('Failed to delete session');
+    } finally {
+      setDeletingSession(null);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedSessions.length === 0) return;
+    if (!confirm(`Delete ${selectedSessions.length} selected session(s)?`)) return;
+
+    for (const sessionCode of selectedSessions) {
+      try {
+        await supabase.functions.invoke('cleanup-expired-session', {
+          body: { sessionCode, forceDelete: true }
+        });
+      } catch (error) {
+        console.error(`Error deleting ${sessionCode}:`, error);
+      }
+    }
+    
+    setSelectedSessions([]);
+    toast.success(`Deleted ${selectedSessions.length} session(s)`);
+    fetchDashboardData();
+  };
+
+  const toggleSessionSelection = (sessionCode: string) => {
+    setSelectedSessions(prev => 
+      prev.includes(sessionCode) 
+        ? prev.filter(s => s !== sessionCode)
+        : [...prev, sessionCode]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedSessions.length === sessions.length) {
+      setSelectedSessions([]);
+    } else {
+      setSelectedSessions(sessions.map(s => s.session_code));
     }
   };
 
@@ -185,16 +243,37 @@ const Admin = () => {
         {/* Sessions Table */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Database className="w-5 h-5" />
-              Active Sessions
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Database className="w-5 h-5" />
+                Active Sessions
+              </CardTitle>
+              {selectedSessions.length > 0 && (
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={handleDeleteSelected}
+                  className="gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete {selectedSessions.length} Selected
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
+                    <th className="text-left p-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedSessions.length === sessions.length && sessions.length > 0}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 rounded border-border cursor-pointer"
+                      />
+                    </th>
                     <th className="text-left p-2 text-sm font-medium text-muted-foreground">Code</th>
                     <th className="text-left p-2 text-sm font-medium text-muted-foreground">Created</th>
                     <th className="text-left p-2 text-sm font-medium text-muted-foreground">Expires</th>
@@ -202,11 +281,20 @@ const Admin = () => {
                     <th className="text-left p-2 text-sm font-medium text-muted-foreground">Visitors</th>
                     <th className="text-left p-2 text-sm font-medium text-muted-foreground">Items</th>
                     <th className="text-left p-2 text-sm font-medium text-muted-foreground">Data</th>
+                    <th className="text-left p-2 text-sm font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sessions.map((session) => (
                     <tr key={session.id} className="border-b hover:bg-muted/50">
+                      <td className="p-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedSessions.includes(session.session_code)}
+                          onChange={() => toggleSessionSelection(session.session_code)}
+                          className="w-4 h-4 rounded border-border cursor-pointer"
+                        />
+                      </td>
                       <td className="p-2">
                         <code className="text-sm font-mono">{session.session_code}</code>
                       </td>
@@ -228,6 +316,21 @@ const Admin = () => {
                       <td className="p-2 text-sm">{session.unique_visitors}</td>
                       <td className="p-2 text-sm">{session.total_items}</td>
                       <td className="p-2 text-sm">{formatBytes(Number(session.total_data_bytes))}</td>
+                      <td className="p-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteSession(session.session_code)}
+                          disabled={deletingSession === session.session_code}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          {deletingSession === session.session_code ? (
+                            <span className="text-xs">Deleting...</span>
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

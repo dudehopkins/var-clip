@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ClipboardHeader } from "@/components/ClipboardHeader";
+import { ResponsiveHeader } from "@/components/ResponsiveHeader";
 import { TextEditor } from "@/components/TextEditor";
 import { MediaPanel } from "@/components/MediaPanel";
 import { SessionLanding } from "@/components/SessionLanding";
@@ -25,6 +25,7 @@ const Index = () => {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [isPublic, setIsPublic] = useState(true);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [hasPassword, setHasPassword] = useState(false);
 
   // Check if session exists and requires password
   useEffect(() => {
@@ -52,6 +53,7 @@ const Index = () => {
         // Update public status and expiration
         setIsPublic(session.is_public);
         setExpiresAt(session.expires_at);
+        setHasPassword(!!session.password_hash);
 
         if (session.password_hash) {
           // Protected session - check if token exists and is valid
@@ -105,8 +107,9 @@ const Index = () => {
         .single();
       
       if (session) {
-        setIsPublic(session.is_public);
-        setExpiresAt(session.expires_at);
+      setIsPublic(session.is_public);
+      setExpiresAt(session.expires_at);
+      setHasPassword(!!session.password_hash);
         
         // If session now requires password, show dialog
         if (session.password_hash) {
@@ -318,13 +321,14 @@ const Index = () => {
       <AnimatedBackground />
       <AdvancedGraphics />
       
-      <ClipboardHeader
+      <ResponsiveHeader
         sessionCode={sessionCode}
         isConnected={isConnected}
         userCount={userCount}
         isPublic={isPublic}
         isAuthenticated={isAuthenticated}
         expiresAt={expiresAt}
+        hasPassword={hasPassword}
         onSettingsUpdated={handleSettingsUpdated}
       />
       

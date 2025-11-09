@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Clipboard, ArrowRight, Sparkles } from "lucide-react";
+import { Clipboard, ArrowRight, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatedBackground } from "./AnimatedBackground";
 import { sessionCodeSchema } from "@/lib/validation";
@@ -12,8 +12,10 @@ import { ThemeToggle } from "./ThemeToggle";
 export const SessionLanding = () => {
   const navigate = useNavigate();
   const [customCode, setCustomCode] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
 
   const generateRandomCode = () => {
+    setIsCreating(true);
     const code = Math.random().toString(36).substring(2, 8);
     navigate(`/${code}`);
   };
@@ -33,6 +35,7 @@ export const SessionLanding = () => {
       return;
     }
     
+    setIsCreating(true);
     navigate(`/${code}`);
   };
 
@@ -77,8 +80,8 @@ export const SessionLanding = () => {
                 onKeyPress={handleKeyPress}
                 className="flex-1"
               />
-              <Button onClick={handleCustomCode} size="icon">
-                <ArrowRight className="w-4 h-4" />
+              <Button onClick={handleCustomCode} size="icon" disabled={isCreating}>
+                {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
@@ -99,9 +102,19 @@ export const SessionLanding = () => {
             onClick={generateRandomCode}
             className="w-full gap-2"
             variant="default"
+            disabled={isCreating}
           >
-            <Sparkles className="w-4 h-4" />
-            Generate Random Session
+            {isCreating ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Creating Session...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                Generate Random Session
+              </>
+            )}
           </Button>
         </div>
 

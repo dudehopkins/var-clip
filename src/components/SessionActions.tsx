@@ -27,15 +27,53 @@ import { Label } from "@/components/ui/label";
 interface SessionActionsProps {
   sessionCode: string;
   expiresAt: string | null;
+  hasPassword?: boolean;
 }
 
-export const SessionActions = ({ sessionCode, expiresAt }: SessionActionsProps) => {
+export const SessionActions = ({ sessionCode, expiresAt, hasPassword = false }: SessionActionsProps) => {
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showExtendDialog, setShowExtendDialog] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExtending, setIsExtending] = useState(false);
   const [extendMinutes, setExtendMinutes] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
+
+  const handleDeleteClick = () => {
+    if (hasPassword) {
+      setShowPasswordDialog(true);
+    } else {
+      setShowDeleteDialog(true);
+    }
+  };
+
+  const handleVerifyPassword = async () => {
+    if (!deletePassword) {
+      toast.error("Please enter password");
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-session-password', {
+        body: { sessionCode, password: deletePassword }
+      });
+
+      if (error || !data?.success) {
+        toast.error("Incorrect password");
+        setIsDeleting(false);
+        return;
+      }
+
+      // Password verified, proceed with deletion
+      await handleDelete();
+    } catch (error) {
+      console.error("Error verifying password:", error);
+      toast.error("Failed to verify password");
+      setIsDeleting(false);
+    }
+  };
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -57,6 +95,8 @@ export const SessionActions = ({ sessionCode, expiresAt }: SessionActionsProps) 
     } finally {
       setIsDeleting(false);
       setShowDeleteDialog(false);
+      setShowPasswordDialog(false);
+      setDeletePassword("");
     }
   };
 
@@ -106,12 +146,43 @@ export const SessionActions = ({ sessionCode, expiresAt }: SessionActionsProps) 
       <Button
         variant="destructive"
         size="sm"
-        onClick={() => setShowDeleteDialog(true)}
+        onClick={handleDeleteClick}
         className="gap-2"
       >
         <Trash2 className="w-4 h-4" />
         Delete
       </Button>
+
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Verify Password</DialogTitle>
+            <DialogDescription>
+              This session is password-protected. Enter the password to delete.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="delete-password">Session Password</Label>
+              <Input
+                id="delete-password"
+                type="password"
+                placeholder="Enter session password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+              />
+            </div>
+            <Button
+              onClick={handleVerifyPassword}
+              disabled={isDeleting || !deletePassword}
+              className="w-full"
+              variant="destructive"
+            >
+              {isDeleting ? "Verifying..." : "Verify & Delete"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
