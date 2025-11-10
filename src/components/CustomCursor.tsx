@@ -26,9 +26,6 @@ export const CustomCursor = () => {
   const primaryColor = theme === "light" ? "260 80% 25%" : "var(--primary)";
   const secondaryColor = theme === "light" ? "280 85% 30%" : "var(--secondary)";
   const accentColor = theme === "light" ? "300 80% 35%" : "var(--accent)";
-  
-  // Don't render on mobile devices
-  if (isMobile) return null;
 
   useEffect(() => {
     let movementTimer: NodeJS.Timeout;
@@ -73,6 +70,9 @@ export const CustomCursor = () => {
       clearInterval(trailCleanup);
     };
   }, []);
+
+  // Don't render on mobile devices
+  if (isMobile) return null;
 
   return (
     <>
