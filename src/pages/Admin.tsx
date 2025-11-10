@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { Shield, Activity, Database, Clock, Users, Trash2 } from "lucide-react";
+import { Shield, Activity, Database, Clock, Users, Trash2, Lock, Unlock, FileText, Image, FileIcon } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface SessionStat {
@@ -21,6 +21,7 @@ interface SessionStat {
   file_items: number;
   total_data_bytes: number;
   last_activity: string | null;
+  has_password?: boolean; // Indicator if session has password protection
 }
 
 interface AnalyticsEvent {
@@ -77,7 +78,16 @@ const Admin = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch session stats
+      // Fetch sessions directly to check for password protection
+      const { data: sessionsData, error: sessionsError } = await supabase
+        .from('sessions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (sessionsError) throw sessionsError;
+
+      // Fetch session stats and merge with password info
       const { data: statsData, error: statsError } = await supabase
         .from('session_stats')
         .select('*')
@@ -85,7 +95,17 @@ const Admin = () => {
         .limit(50);
 
       if (statsError) throw statsError;
-      setSessions(statsData || []);
+      
+      // Merge password info with stats
+      const mergedData = (statsData || []).map(stat => {
+        const session = sessionsData?.find(s => s.id === stat.id);
+        return {
+          ...stat,
+          has_password: session?.password_hash != null
+        };
+      });
+      
+      setSessions(mergedData);
 
       // Fetch recent analytics
       const { data: analyticsData, error: analyticsError } = await supabase
@@ -175,6 +195,7 @@ const Admin = () => {
 
   const totalSessions = sessions.length;
   const activeSessions = sessions.filter(s => !s.expires_at || new Date(s.expires_at) > new Date()).length;
+  const protectedSessions = sessions.filter(s => s.has_password).length;
   const totalVisitors = sessions.reduce((sum, s) => sum + Number(s.unique_visitors), 0);
   const totalData = sessions.reduce((sum, s) => sum + Number(s.total_data_bytes), 0);
 
@@ -202,10 +223,13 @@ const Admin = () => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Sessions</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Database className="w-4 h-4" />
+                Total Sessions
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{totalSessions}</div>
@@ -214,7 +238,10 @@ const Admin = () => {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Active Sessions</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Activity className="w-4 h-4" />
+                Active Sessions
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-500">{activeSessions}</div>
@@ -223,7 +250,22 @@ const Admin = () => {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Visitors</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Lock className="w-4 h-4" />
+                Protected
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-500">{protectedSessions}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Total Visitors
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{totalVisitors}</div>
@@ -232,7 +274,10 @@ const Admin = () => {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Data Shared</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Database className="w-4 h-4" />
+                Data Shared
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{formatBytes(totalData)}</div>
@@ -275,64 +320,130 @@ const Admin = () => {
                       />
                     </th>
                     <th className="text-left p-2 text-sm font-medium text-muted-foreground">Code</th>
+                    <th className="text-left p-2 text-sm font-medium text-muted-foreground">Status</th>
+                    <th className="text-left p-2 text-sm font-medium text-muted-foreground">Security</th>
                     <th className="text-left p-2 text-sm font-medium text-muted-foreground">Created</th>
                     <th className="text-left p-2 text-sm font-medium text-muted-foreground">Expires</th>
-                    <th className="text-left p-2 text-sm font-medium text-muted-foreground">Type</th>
+                    <th className="text-left p-2 text-sm font-medium text-muted-foreground">Activity</th>
+                    <th className="text-left p-2 text-sm font-medium text-muted-foreground">Content</th>
                     <th className="text-left p-2 text-sm font-medium text-muted-foreground">Visitors</th>
-                    <th className="text-left p-2 text-sm font-medium text-muted-foreground">Items</th>
-                    <th className="text-left p-2 text-sm font-medium text-muted-foreground">Data</th>
+                    <th className="text-left p-2 text-sm font-medium text-muted-foreground">Data Size</th>
                     <th className="text-left p-2 text-sm font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {sessions.map((session) => (
-                    <tr key={session.id} className="border-b hover:bg-muted/50">
-                      <td className="p-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedSessions.includes(session.session_code)}
-                          onChange={() => toggleSessionSelection(session.session_code)}
-                          className="w-4 h-4 rounded border-border cursor-pointer"
-                        />
-                      </td>
-                      <td className="p-2">
-                        <code className="text-sm font-mono">{session.session_code}</code>
-                      </td>
-                      <td className="p-2 text-sm">
-                        {new Date(session.created_at).toLocaleString()}
-                      </td>
-                      <td className="p-2 text-sm">
-                        {session.expires_at 
-                          ? new Date(session.expires_at).toLocaleString()
-                          : <Badge variant="secondary">Never</Badge>
-                        }
-                      </td>
-                      <td className="p-2">
-                        {session.is_public 
-                          ? <Badge variant="outline">Public</Badge>
-                          : <Badge>Protected</Badge>
-                        }
-                      </td>
-                      <td className="p-2 text-sm">{session.unique_visitors}</td>
-                      <td className="p-2 text-sm">{session.total_items}</td>
-                      <td className="p-2 text-sm">{formatBytes(Number(session.total_data_bytes))}</td>
-                      <td className="p-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteSession(session.session_code)}
-                          disabled={deletingSession === session.session_code}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        >
-                          {deletingSession === session.session_code ? (
-                            <span className="text-xs">Deleting...</span>
+                  {sessions.map((session) => {
+                    const isExpired = session.expires_at && new Date(session.expires_at) < new Date();
+                    const isActive = !isExpired;
+                    
+                    return (
+                      <tr key={session.id} className="border-b hover:bg-muted/50">
+                        <td className="p-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedSessions.includes(session.session_code)}
+                            onChange={() => toggleSessionSelection(session.session_code)}
+                            className="w-4 h-4 rounded border-border cursor-pointer"
+                          />
+                        </td>
+                        <td className="p-2">
+                          <code className="text-sm font-mono font-bold">{session.session_code}</code>
+                        </td>
+                        <td className="p-2">
+                          {isActive ? (
+                            <Badge variant="default" className="bg-green-500">Active</Badge>
                           ) : (
-                            <Trash2 className="w-4 h-4" />
+                            <Badge variant="destructive">Expired</Badge>
                           )}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="p-2">
+                          <div className="flex items-center gap-2">
+                            {session.has_password ? (
+                              <>
+                                <Lock className="w-4 h-4 text-yellow-500" />
+                                <Badge variant="outline" className="border-yellow-500 text-yellow-500">
+                                  Password Protected
+                                </Badge>
+                              </>
+                            ) : (
+                              <>
+                                <Unlock className="w-4 h-4 text-green-500" />
+                                <Badge variant="outline" className="border-green-500 text-green-500">
+                                  Public Access
+                                </Badge>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-2 text-sm text-muted-foreground">
+                          {new Date(session.created_at).toLocaleDateString()}
+                          <br />
+                          <span className="text-xs">{new Date(session.created_at).toLocaleTimeString()}</span>
+                        </td>
+                        <td className="p-2 text-sm">
+                          {session.expires_at ? (
+                            <div>
+                              {new Date(session.expires_at).toLocaleDateString()}
+                              <br />
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(session.expires_at).toLocaleTimeString()}
+                              </span>
+                            </div>
+                          ) : (
+                            <Badge variant="secondary">No Expiration</Badge>
+                          )}
+                        </td>
+                        <td className="p-2 text-sm">
+                          {session.last_activity ? (
+                            <div className="text-muted-foreground">
+                              {new Date(session.last_activity).toLocaleDateString()}
+                              <br />
+                              <span className="text-xs">
+                                {new Date(session.last_activity).toLocaleTimeString()}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">No activity</span>
+                          )}
+                        </td>
+                        <td className="p-2">
+                          <div className="flex flex-col gap-1 text-xs">
+                            <div className="flex items-center gap-1">
+                              <FileText className="w-3 h-3" />
+                              <span>{session.text_items} text</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Image className="w-3 h-3" />
+                              <span>{session.image_items} images</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <FileIcon className="w-3 h-3" />
+                              <span>{session.file_items} files</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-2 text-sm font-medium">{session.unique_visitors}</td>
+                        <td className="p-2 text-sm font-mono">
+                          {formatBytes(Number(session.total_data_bytes))}
+                        </td>
+                        <td className="p-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteSession(session.session_code)}
+                            disabled={deletingSession === session.session_code}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            {deletingSession === session.session_code ? (
+                              <span className="text-xs">Deleting...</span>
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
