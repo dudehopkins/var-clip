@@ -28,10 +28,11 @@ export const CustomCursor = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
   
-  // Dynamic colors based on theme - much darker in light mode
-  const primaryColor = theme === "light" ? "260 80% 25%" : "var(--primary)";
-  const secondaryColor = theme === "light" ? "280 85% 30%" : "var(--secondary)";
-  const accentColor = theme === "light" ? "300 80% 35%" : "var(--accent)";
+  // Dynamic colors and blend mode based on theme
+  const primaryColor = theme === "light" ? "260 70% 45%" : "var(--primary)";
+  const secondaryColor = theme === "light" ? "280 75% 50%" : "var(--secondary)";
+  const accentColor = theme === "light" ? "300 70% 55%" : "var(--accent)";
+  const blendMode = theme === "light" ? "mix-blend-multiply" : "mix-blend-screen";
 
   useEffect(() => {
     let movementTimer: NodeJS.Timeout;
@@ -91,7 +92,7 @@ export const CustomCursor = () => {
         return (
           <div
             key={`${point.timestamp}-${index}`}
-            className="fixed pointer-events-none z-[9999] mix-blend-screen"
+            className={`fixed pointer-events-none z-[9999] ${blendMode}`}
             style={{
               left: point.x,
               top: point.y,
@@ -116,7 +117,7 @@ export const CustomCursor = () => {
 
       {/* Main cursor */}
       <div
-        className="fixed pointer-events-none z-[10000] mix-blend-screen transition-transform duration-100"
+        className={`fixed pointer-events-none z-[10000] ${blendMode} transition-transform duration-100`}
         style={{
           left: position.x,
           top: position.y,
