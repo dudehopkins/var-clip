@@ -14,12 +14,18 @@ export const CustomCursor = () => {
   const [isMoving, setIsMoving] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   
-  // Detect mobile on mount
+  // Detect mobile on mount - check both touch AND small screen
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0);
+      const isTouchDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+      const isSmallScreen = window.innerWidth < 1024; // tablets and phones
+      setIsMobile(isTouchDevice && isSmallScreen);
     };
     checkMobile();
+    
+    // Re-check on resize
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
   
   // Dynamic colors based on theme - much darker in light mode
