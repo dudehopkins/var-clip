@@ -3,9 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { Shield, Activity, Database, Clock, Users, Trash2, Lock, Unlock, FileText, Image, FileIcon } from "lucide-react";
+import { Shield, Activity, Database, Clock, Users, Trash2, Lock, Unlock, FileText, Image, FileIcon, Search, Download, ArrowUpDown, ArrowUp, ArrowDown, Eye } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface SessionStat {
@@ -34,14 +37,32 @@ interface AnalyticsEvent {
   metadata: any;
 }
 
+type SortField = 'session_code' | 'created_at' | 'expires_at' | 'unique_visitors' | 'total_data_bytes' | 'last_activity';
+type SortDirection = 'asc' | 'desc';
+
 const Admin = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<SessionStat[]>([]);
+  const [filteredSessions, setFilteredSessions] = useState<SessionStat[]>([]);
   const [recentActivity, setRecentActivity] = useState<AnalyticsEvent[]>([]);
   const [selectedSessions, setSelectedSessions] = useState<string[]>([]);
   const [deletingSession, setDeletingSession] = useState<string | null>(null);
+  
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [securityFilter, setSecurityFilter] = useState<string>("all");
+  
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField>('created_at');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  
+  // Details view state
+  const [selectedSession, setSelectedSession] = useState<SessionStat | null>(null);
+  const [sessionDetails, setSessionDetails] = useState<any>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
   useEffect(() => {
     checkAdminAccess();
@@ -123,6 +144,154 @@ const Admin = () => {
     }
   };
 
+  // Apply filters and sorting
+  useEffect(() => {
+    let filtered = [...sessions];
+
+    // Apply search
+    if (searchQuery) {
+      filtered = filtered.filter(s => 
+        s.session_code.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Apply status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(s => {
+        const isExpired = s.expires_at && new Date(s.expires_at) < new Date();
+        return statusFilter === "active" ? !isExpired : isExpired;
+      });
+    }
+
+    // Apply security filter
+    if (securityFilter !== "all") {
+      filtered = filtered.filter(s => 
+        securityFilter === "protected" ? s.has_password : !s.has_password
+      );
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aVal: any = a[sortField];
+      let bVal: any = b[sortField];
+
+      // Handle null values
+      if (aVal === null || aVal === undefined) return 1;
+      if (bVal === null || bVal === undefined) return -1;
+
+      // Convert to comparable values
+      if (sortField === 'created_at' || sortField === 'expires_at' || sortField === 'last_activity') {
+        aVal = new Date(aVal).getTime();
+        bVal = new Date(bVal).getTime();
+      } else if (typeof aVal === 'string') {
+        aVal = aVal.toLowerCase();
+        bVal = bVal.toLowerCase();
+      }
+
+      const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+
+    setFilteredSessions(filtered);
+  }, [sessions, searchQuery, statusFilter, securityFilter, sortField, sortDirection]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="w-3 h-3 opacity-50" />;
+    return sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />;
+  };
+
+  const viewSessionDetails = async (session: SessionStat) => {
+    setSelectedSession(session);
+    setShowDetailsDialog(true);
+    
+    try {
+      // Fetch session items
+      const { data: items, error: itemsError } = await supabase
+        .from('session_items')
+        .select('*')
+        .eq('session_id', session.id)
+        .order('created_at', { ascending: false });
+
+      if (itemsError) throw itemsError;
+
+      // Fetch session analytics
+      const { data: analytics, error: analyticsError } = await supabase
+        .from('session_analytics')
+        .select('*')
+        .eq('session_id', session.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (analyticsError) throw analyticsError;
+
+      setSessionDetails({
+        items: items || [],
+        analytics: analytics || []
+      });
+    } catch (error) {
+      console.error('Error fetching session details:', error);
+      toast.error('Failed to load session details');
+    }
+  };
+
+  const exportData = (format: 'csv' | 'json') => {
+    try {
+      if (format === 'json') {
+        const dataStr = JSON.stringify(filteredSessions, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `sessions-${new Date().toISOString()}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+      } else {
+        // CSV export
+        const headers = ['Code', 'Status', 'Security', 'Created', 'Expires', 'Visitors', 'Text Items', 'Images', 'Files', 'Data Size', 'Last Activity'];
+        const rows = filteredSessions.map(s => [
+          s.session_code,
+          (!s.expires_at || new Date(s.expires_at) > new Date()) ? 'Active' : 'Expired',
+          s.has_password ? 'Protected' : 'Public',
+          new Date(s.created_at).toLocaleString(),
+          s.expires_at ? new Date(s.expires_at).toLocaleString() : 'Never',
+          s.unique_visitors,
+          s.text_items,
+          s.image_items,
+          s.file_items,
+          formatBytes(Number(s.total_data_bytes)),
+          s.last_activity ? new Date(s.last_activity).toLocaleString() : 'None'
+        ]);
+        
+        const csvContent = [
+          headers.join(','),
+          ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+        ].join('\n');
+        
+        const dataBlob = new Blob([csvContent], { type: 'text/csv' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `sessions-${new Date().toISOString()}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+      
+      toast.success(`Exported ${filteredSessions.length} sessions as ${format.toUpperCase()}`);
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      toast.error('Failed to export data');
+    }
+  };
+
   const handleDeleteSession = async (sessionCode: string) => {
     if (!confirm(`Are you sure you want to delete session "${sessionCode}"?`)) return;
     
@@ -193,11 +362,11 @@ const Admin = () => {
     return null;
   }
 
-  const totalSessions = sessions.length;
-  const activeSessions = sessions.filter(s => !s.expires_at || new Date(s.expires_at) > new Date()).length;
-  const protectedSessions = sessions.filter(s => s.has_password).length;
-  const totalVisitors = sessions.reduce((sum, s) => sum + Number(s.unique_visitors), 0);
-  const totalData = sessions.reduce((sum, s) => sum + Number(s.total_data_bytes), 0);
+  const totalSessions = filteredSessions.length;
+  const activeSessions = filteredSessions.filter(s => !s.expires_at || new Date(s.expires_at) > new Date()).length;
+  const protectedSessions = filteredSessions.filter(s => s.has_password).length;
+  const totalVisitors = filteredSessions.reduce((sum, s) => sum + Number(s.unique_visitors), 0);
+  const totalData = filteredSessions.reduce((sum, s) => sum + Number(s.total_data_bytes), 0);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -285,25 +454,84 @@ const Admin = () => {
           </Card>
         </div>
 
+        {/* Search & Filters */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by session code..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active Only</SelectItem>
+                  <SelectItem value="expired">Expired Only</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={securityFilter} onValueChange={setSecurityFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by security" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Security</SelectItem>
+                  <SelectItem value="protected">Protected Only</SelectItem>
+                  <SelectItem value="public">Public Only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Sessions Table */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <CardTitle className="flex items-center gap-2">
                 <Database className="w-5 h-5" />
-                Active Sessions
+                Sessions ({totalSessions})
               </CardTitle>
-              {selectedSessions.length > 0 && (
+              <div className="flex gap-2">
+                {selectedSessions.length > 0 && (
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={handleDeleteSelected}
+                    className="gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete {selectedSessions.length}
+                  </Button>
+                )}
                 <Button 
-                  variant="destructive" 
+                  variant="outline" 
                   size="sm"
-                  onClick={handleDeleteSelected}
+                  onClick={() => exportData('csv')}
                   className="gap-2"
                 >
-                  <Trash2 className="w-4 h-4" />
-                  Delete {selectedSessions.length} Selected
+                  <Download className="w-4 h-4" />
+                  CSV
                 </Button>
-              )}
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => exportData('json')}
+                  className="gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  JSON
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -314,25 +542,67 @@ const Admin = () => {
                     <th className="text-left p-2">
                       <input
                         type="checkbox"
-                        checked={selectedSessions.length === sessions.length && sessions.length > 0}
+                        checked={selectedSessions.length === filteredSessions.length && filteredSessions.length > 0}
                         onChange={toggleSelectAll}
                         className="w-4 h-4 rounded border-border cursor-pointer"
                       />
                     </th>
-                    <th className="text-left p-2 text-sm font-medium text-muted-foreground">Code</th>
+                    <th 
+                      className="text-left p-2 text-sm font-medium text-muted-foreground cursor-pointer hover:text-foreground"
+                      onClick={() => handleSort('session_code')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Code <SortIcon field="session_code" />
+                      </div>
+                    </th>
                     <th className="text-left p-2 text-sm font-medium text-muted-foreground">Status</th>
                     <th className="text-left p-2 text-sm font-medium text-muted-foreground">Security</th>
-                    <th className="text-left p-2 text-sm font-medium text-muted-foreground">Created</th>
-                    <th className="text-left p-2 text-sm font-medium text-muted-foreground">Expires</th>
-                    <th className="text-left p-2 text-sm font-medium text-muted-foreground">Activity</th>
+                    <th 
+                      className="text-left p-2 text-sm font-medium text-muted-foreground cursor-pointer hover:text-foreground"
+                      onClick={() => handleSort('created_at')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Created <SortIcon field="created_at" />
+                      </div>
+                    </th>
+                    <th 
+                      className="text-left p-2 text-sm font-medium text-muted-foreground cursor-pointer hover:text-foreground"
+                      onClick={() => handleSort('expires_at')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Expires <SortIcon field="expires_at" />
+                      </div>
+                    </th>
+                    <th 
+                      className="text-left p-2 text-sm font-medium text-muted-foreground cursor-pointer hover:text-foreground"
+                      onClick={() => handleSort('last_activity')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Activity <SortIcon field="last_activity" />
+                      </div>
+                    </th>
                     <th className="text-left p-2 text-sm font-medium text-muted-foreground">Content</th>
-                    <th className="text-left p-2 text-sm font-medium text-muted-foreground">Visitors</th>
-                    <th className="text-left p-2 text-sm font-medium text-muted-foreground">Data Size</th>
+                    <th 
+                      className="text-left p-2 text-sm font-medium text-muted-foreground cursor-pointer hover:text-foreground"
+                      onClick={() => handleSort('unique_visitors')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Visitors <SortIcon field="unique_visitors" />
+                      </div>
+                    </th>
+                    <th 
+                      className="text-left p-2 text-sm font-medium text-muted-foreground cursor-pointer hover:text-foreground"
+                      onClick={() => handleSort('total_data_bytes')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Data Size <SortIcon field="total_data_bytes" />
+                      </div>
+                    </th>
                     <th className="text-left p-2 text-sm font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {sessions.map((session) => {
+                  {filteredSessions.map((session) => {
                     const isExpired = session.expires_at && new Date(session.expires_at) < new Date();
                     const isActive = !isExpired;
                     
@@ -347,7 +617,13 @@ const Admin = () => {
                           />
                         </td>
                         <td className="p-2">
-                          <code className="text-sm font-mono font-bold">{session.session_code}</code>
+                          <button
+                            onClick={() => viewSessionDetails(session)}
+                            className="text-sm font-mono font-bold hover:text-primary cursor-pointer flex items-center gap-1"
+                          >
+                            {session.session_code}
+                            <Eye className="w-3 h-3" />
+                          </button>
                         </td>
                         <td className="p-2">
                           {isActive ? (
@@ -478,6 +754,130 @@ const Admin = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Session Details Dialog */}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Database className="w-5 h-5" />
+              Session Details: <code className="font-mono">{selectedSession?.session_code}</code>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedSession && sessionDetails && (
+            <div className="space-y-6">
+              {/* Session Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Status</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {(!selectedSession.expires_at || new Date(selectedSession.expires_at) > new Date()) ? (
+                      <Badge variant="default" className="bg-green-500">Active</Badge>
+                    ) : (
+                      <Badge variant="destructive">Expired</Badge>
+                    )}
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Security</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {selectedSession.has_password ? (
+                      <Badge variant="outline" className="border-yellow-500 text-yellow-500">
+                        <Lock className="w-3 h-3 mr-1" />
+                        Password Protected
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-green-500 text-green-500">
+                        <Unlock className="w-3 h-3 mr-1" />
+                        Public Access
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Session Items */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Session Items ({sessionDetails.items.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {sessionDetails.items.map((item: any) => (
+                      <div key={item.id} className="p-3 rounded-lg bg-muted/30 border">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              {item.item_type === 'text' && <FileText className="w-4 h-4" />}
+                              {item.item_type === 'image' && <Image className="w-4 h-4" />}
+                              {item.item_type === 'file' && <FileIcon className="w-4 h-4" />}
+                              <Badge variant="outline">{item.item_type}</Badge>
+                              {item.file_name && <span className="text-sm text-muted-foreground">{item.file_name}</span>}
+                            </div>
+                            {item.content && (
+                              <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                                {item.content}
+                              </p>
+                            )}
+                            {item.file_size && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Size: {formatBytes(item.file_size)}
+                              </p>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(item.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {sessionDetails.items.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">No items in this session</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Activity Log */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Activity className="w-4 h-4" />
+                    Recent Activity ({sessionDetails.analytics.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {sessionDetails.analytics.map((event: any) => (
+                      <div key={event.id} className="flex items-center justify-between p-2 rounded bg-muted/30 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">{event.action}</Badge>
+                          <span className="text-muted-foreground text-xs">{event.ip_address}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(event.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                    {sessionDetails.analytics.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">No activity recorded</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
