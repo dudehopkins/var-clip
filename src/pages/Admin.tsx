@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,10 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { Shield, Activity, Database, Clock, Users, Trash2, Lock, Unlock, FileText, Image, FileIcon, Search, Download, ArrowUpDown, ArrowUp, ArrowDown, Eye } from "lucide-react";
+import { 
+  Shield, Activity, Database, Clock, Users, Trash2, Lock, Unlock, 
+  FileText, Image, FileIcon, Search, Download, ArrowUpDown, ArrowUp, 
+  ArrowDown, Eye, CalendarIcon, RefreshCw, ChevronLeft, ChevronRight 
+} from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { format } from "date-fns";
 
 interface SessionStat {
   id: string;
@@ -24,7 +31,7 @@ interface SessionStat {
   file_items: number;
   total_data_bytes: number;
   last_activity: string | null;
-  has_password?: boolean; // Indicator if session has password protection
+  has_password?: boolean;
 }
 
 interface AnalyticsEvent {
@@ -40,6 +47,8 @@ interface AnalyticsEvent {
 type SortField = 'session_code' | 'created_at' | 'expires_at' | 'unique_visitors' | 'total_data_bytes' | 'last_activity';
 type SortDirection = 'asc' | 'desc';
 
+const ITEMS_PER_PAGE = 10;
+
 const Admin = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -49,15 +58,23 @@ const Admin = () => {
   const [recentActivity, setRecentActivity] = useState<AnalyticsEvent[]>([]);
   const [selectedSessions, setSelectedSessions] = useState<string[]>([]);
   const [deletingSession, setDeletingSession] = useState<string | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [securityFilter, setSecurityFilter] = useState<string>("all");
   
+  // Date range filter
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  
   // Sorting state
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Details view state
   const [selectedSession, setSelectedSession] = useState<SessionStat | null>(null);
@@ -70,8 +87,6 @@ const Admin = () => {
 
   const checkAdminAccess = async () => {
     try {
-      // For now, use a simple token-based auth
-      // In production, this should be replaced with proper authentication
       const adminToken = localStorage.getItem('admin_token');
       
       if (adminToken !== 'admin@clip4all2002') {
@@ -80,6 +95,7 @@ const Admin = () => {
           localStorage.setItem('admin_token', token);
           setIsAdmin(true);
           fetchDashboardData();
+          setupRealtimeSubscription();
         } else {
           toast.error('Access denied');
           navigate('/');
@@ -87,6 +103,7 @@ const Admin = () => {
       } else {
         setIsAdmin(true);
         fetchDashboardData();
+        setupRealtimeSubscription();
       }
     } catch (error) {
       console.error('Error checking admin access:', error);
@@ -97,27 +114,53 @@ const Admin = () => {
     }
   };
 
-  const fetchDashboardData = async () => {
+  const setupRealtimeSubscription = () => {
+    const channel = supabase
+      .channel('admin-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'sessions' },
+        () => fetchDashboardData()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'session_items' },
+        () => fetchDashboardData()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'session_analytics' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setRecentActivity(prev => [payload.new as AnalyticsEvent, ...prev.slice(0, 99)]);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+
+  const fetchDashboardData = useCallback(async () => {
     try {
-      // Fetch sessions directly to check for password protection
       const { data: sessionsData, error: sessionsError } = await supabase
         .from('sessions')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(200);
 
       if (sessionsError) throw sessionsError;
 
-      // Fetch session stats and merge with password info
       const { data: statsData, error: statsError } = await supabase
         .from('session_stats')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(200);
 
       if (statsError) throw statsError;
       
-      // Merge password info with stats
       const mergedData = (statsData || []).map(stat => {
         const session = sessionsData?.find(s => s.id === stat.id);
         return {
@@ -128,7 +171,6 @@ const Admin = () => {
       
       setSessions(mergedData);
 
-      // Fetch recent analytics
       const { data: analyticsData, error: analyticsError } = await supabase
         .from('session_analytics')
         .select('*')
@@ -142,7 +184,7 @@ const Admin = () => {
       console.error('Error fetching dashboard data:', error);
       toast.error('Failed to load dashboard data');
     }
-  };
+  }, []);
 
   // Apply filters and sorting
   useEffect(() => {
@@ -170,16 +212,24 @@ const Admin = () => {
       );
     }
 
+    // Apply date range filter
+    if (startDate) {
+      filtered = filtered.filter(s => new Date(s.created_at) >= startDate);
+    }
+    if (endDate) {
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(s => new Date(s.created_at) <= endOfDay);
+    }
+
     // Apply sorting
     filtered.sort((a, b) => {
       let aVal: any = a[sortField];
       let bVal: any = b[sortField];
 
-      // Handle null values
       if (aVal === null || aVal === undefined) return 1;
       if (bVal === null || bVal === undefined) return -1;
 
-      // Convert to comparable values
       if (sortField === 'created_at' || sortField === 'expires_at' || sortField === 'last_activity') {
         aVal = new Date(aVal).getTime();
         bVal = new Date(bVal).getTime();
@@ -193,7 +243,15 @@ const Admin = () => {
     });
 
     setFilteredSessions(filtered);
-  }, [sessions, searchQuery, statusFilter, securityFilter, sortField, sortDirection]);
+    setCurrentPage(1); // Reset to first page when filters change
+  }, [sessions, searchQuery, statusFilter, securityFilter, sortField, sortDirection, startDate, endDate]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredSessions.length / ITEMS_PER_PAGE);
+  const paginatedSessions = filteredSessions.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -214,7 +272,6 @@ const Admin = () => {
     setShowDetailsDialog(true);
     
     try {
-      // Fetch session items
       const { data: items, error: itemsError } = await supabase
         .from('session_items')
         .select('*')
@@ -223,7 +280,6 @@ const Admin = () => {
 
       if (itemsError) throw itemsError;
 
-      // Fetch session analytics
       const { data: analytics, error: analyticsError } = await supabase
         .from('session_analytics')
         .select('*')
@@ -255,7 +311,6 @@ const Admin = () => {
         link.click();
         URL.revokeObjectURL(url);
       } else {
-        // CSV export
         const headers = ['Code', 'Status', 'Security', 'Created', 'Expires', 'Visitors', 'Text Items', 'Images', 'Files', 'Data Size', 'Last Activity'];
         const rows = filteredSessions.map(s => [
           s.session_code,
@@ -312,23 +367,44 @@ const Admin = () => {
     }
   };
 
-  const handleDeleteSelected = async () => {
+  const handleBulkDelete = async () => {
     if (selectedSessions.length === 0) return;
     if (!confirm(`Delete ${selectedSessions.length} selected session(s)?`)) return;
 
+    setBulkDeleting(true);
+    let deleted = 0;
+    
     for (const sessionCode of selectedSessions) {
       try {
         await supabase.functions.invoke('cleanup-expired-session', {
           body: { sessionCode, forceDelete: true }
         });
+        deleted++;
       } catch (error) {
         console.error(`Error deleting ${sessionCode}:`, error);
       }
     }
     
     setSelectedSessions([]);
-    toast.success(`Deleted ${selectedSessions.length} session(s)`);
+    setBulkDeleting(false);
+    toast.success(`Deleted ${deleted}/${selectedSessions.length} session(s)`);
     fetchDashboardData();
+  };
+
+  const handleBulkSelectAll = () => {
+    if (selectedSessions.length === paginatedSessions.length) {
+      setSelectedSessions([]);
+    } else {
+      setSelectedSessions(paginatedSessions.map(s => s.session_code));
+    }
+  };
+
+  const handleSelectAllFiltered = () => {
+    if (selectedSessions.length === filteredSessions.length) {
+      setSelectedSessions([]);
+    } else {
+      setSelectedSessions(filteredSessions.map(s => s.session_code));
+    }
   };
 
   const toggleSessionSelection = (sessionCode: string) => {
@@ -339,12 +415,9 @@ const Admin = () => {
     );
   };
 
-  const toggleSelectAll = () => {
-    if (selectedSessions.length === sessions.length) {
-      setSelectedSessions([]);
-    } else {
-      setSelectedSessions(sessions.map(s => s.session_code));
-    }
+  const clearDateFilters = () => {
+    setStartDate(undefined);
+    setEndDate(undefined);
   };
 
   if (loading) {
@@ -388,7 +461,13 @@ const Admin = () => {
               <p className="text-muted-foreground">VarsClip Traffic Monitor</p>
             </div>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={fetchDashboardData} className="gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </Button>
+            <ThemeToggle />
+          </div>
         </div>
 
         {/* Stats Grid */}
@@ -454,11 +533,11 @@ const Admin = () => {
           </Card>
         </div>
 
-        {/* Search & Filters */}
+        {/* Search, Filters & Date Range */}
         <Card>
           <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="md:col-span-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+              <div className="lg:col-span-2">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -469,6 +548,7 @@ const Admin = () => {
                   />
                 </div>
               </div>
+              
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by status" />
@@ -479,6 +559,7 @@ const Admin = () => {
                   <SelectItem value="expired">Expired Only</SelectItem>
                 </SelectContent>
               </Select>
+              
               <Select value={securityFilter} onValueChange={setSecurityFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by security" />
@@ -489,7 +570,51 @@ const Admin = () => {
                   <SelectItem value="public">Public Only</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Date Range Filters */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="gap-2 justify-start">
+                    <CalendarIcon className="w-4 h-4" />
+                    {startDate ? format(startDate, "MMM d") : "From"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="gap-2 justify-start">
+                    <CalendarIcon className="w-4 h-4" />
+                    {endDate ? format(endDate, "MMM d") : "To"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
+
+            {(startDate || endDate) && (
+              <div className="mt-3 flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Date filter active</span>
+                <Button variant="ghost" size="sm" onClick={clearDateFilters}>
+                  Clear dates
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -501,17 +626,28 @@ const Admin = () => {
                 <Database className="w-5 h-5" />
                 Sessions ({totalSessions})
               </CardTitle>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {selectedSessions.length > 0 && (
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={handleDeleteSelected}
-                    className="gap-2"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Delete {selectedSessions.length}
-                  </Button>
+                  <>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleSelectAllFiltered}
+                      className="gap-2"
+                    >
+                      {selectedSessions.length === filteredSessions.length ? 'Deselect All' : `Select All ${filteredSessions.length}`}
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={handleBulkDelete}
+                      disabled={bulkDeleting}
+                      className="gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {bulkDeleting ? 'Deleting...' : `Delete ${selectedSessions.length}`}
+                    </Button>
+                  </>
                 )}
                 <Button 
                   variant="outline" 
@@ -542,8 +678,8 @@ const Admin = () => {
                     <th className="text-left p-2">
                       <input
                         type="checkbox"
-                        checked={selectedSessions.length === filteredSessions.length && filteredSessions.length > 0}
-                        onChange={toggleSelectAll}
+                        checked={selectedSessions.length === paginatedSessions.length && paginatedSessions.length > 0}
+                        onChange={handleBulkSelectAll}
                         className="w-4 h-4 rounded border-border cursor-pointer"
                       />
                     </th>
@@ -602,7 +738,7 @@ const Admin = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSessions.map((session) => {
+                  {paginatedSessions.map((session) => {
                     const isExpired = session.expires_at && new Date(session.expires_at) < new Date();
                     const isActive = !isExpired;
                     
@@ -638,14 +774,14 @@ const Admin = () => {
                               <>
                                 <Lock className="w-4 h-4 text-yellow-500" />
                                 <Badge variant="outline" className="border-yellow-500 text-yellow-500">
-                                  Password Protected
+                                  Protected
                                 </Badge>
                               </>
                             ) : (
                               <>
                                 <Unlock className="w-4 h-4 text-green-500" />
                                 <Badge variant="outline" className="border-green-500 text-green-500">
-                                  Public Access
+                                  Public
                                 </Badge>
                               </>
                             )}
@@ -723,6 +859,60 @@ const Admin = () => {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <div className="text-sm text-muted-foreground">
+                  Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredSessions.length)} of {filteredSessions.length}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let page: number;
+                      if (totalPages <= 5) {
+                        page = i + 1;
+                      } else if (currentPage <= 3) {
+                        page = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        page = totalPages - 4 + i;
+                      } else {
+                        page = currentPage - 2 + i;
+                      }
+                      return (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(page)}
+                          className="w-8"
+                        >
+                          {page}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -731,7 +921,7 @@ const Admin = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="w-5 h-5" />
-              Recent Activity
+              Recent Activity (Real-time)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -767,7 +957,6 @@ const Admin = () => {
           
           {selectedSession && sessionDetails && (
             <div className="space-y-6">
-              {/* Session Info */}
               <div className="grid grid-cols-2 gap-4">
                 <Card>
                   <CardHeader className="pb-2">
@@ -802,7 +991,6 @@ const Admin = () => {
                 </Card>
               </div>
 
-              {/* Session Items */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
@@ -847,7 +1035,6 @@ const Admin = () => {
                 </CardContent>
               </Card>
 
-              {/* Activity Log */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
@@ -861,7 +1048,7 @@ const Admin = () => {
                       <div key={event.id} className="flex items-center justify-between p-2 rounded bg-muted/30 text-sm">
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs">{event.action}</Badge>
-                          <span className="text-muted-foreground text-xs">{event.ip_address}</span>
+                          <span className="text-xs text-muted-foreground">{event.ip_address}</span>
                         </div>
                         <span className="text-xs text-muted-foreground">
                           {new Date(event.created_at).toLocaleString()}
