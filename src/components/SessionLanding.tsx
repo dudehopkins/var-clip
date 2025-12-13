@@ -6,7 +6,6 @@ import { Clipboard, ArrowRight, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatedBackground } from "./AnimatedBackground";
 import { sessionCodeSchema } from "@/lib/validation";
-import { Footer } from "./Footer";
 import { ThemeToggle } from "./ThemeToggle";
 
 export const SessionLanding = () => {
@@ -124,8 +123,6 @@ export const SessionLanding = () => {
           </p>
         </div>
       </div>
-      
-      <Footer />
     </div>
   );
 };
