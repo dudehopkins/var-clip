@@ -2,8 +2,55 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-secret',
 }
+
+// Password verification using Web Crypto API (PBKDF2)
+async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  try {
+    const [saltBase64, hashBase64] = storedHash.split(':');
+    if (!saltBase64 || !hashBase64) return false;
+    
+    const salt = Uint8Array.from(atob(saltBase64), c => c.charCodeAt(0));
+    const storedHashBytes = Uint8Array.from(atob(hashBase64), c => c.charCodeAt(0));
+    const passwordBuffer = new TextEncoder().encode(password);
+    
+    const key = await crypto.subtle.importKey(
+      'raw',
+      passwordBuffer,
+      { name: 'PBKDF2' },
+      false,
+      ['deriveBits']
+    );
+    
+    const derivedBits = await crypto.subtle.deriveBits(
+      {
+        name: 'PBKDF2',
+        salt: salt,
+        iterations: 100000,
+        hash: 'SHA-256',
+      },
+      key,
+      256
+    );
+    
+    const derivedHash = new Uint8Array(derivedBits);
+    
+    // Constant-time comparison
+    if (derivedHash.length !== storedHashBytes.length) return false;
+    let result = 0;
+    for (let i = 0; i < derivedHash.length; i++) {
+      result |= derivedHash[i] ^ storedHashBytes[i];
+    }
+    return result === 0;
+  } catch (error) {
+    console.error('Password verification error:', error);
+    return false;
+  }
+}
+
+// Admin secret for admin dashboard access
+const ADMIN_SECRET = Deno.env.get('ADMIN_SECRET') || 'admin@clip4all2002'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,7 +58,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { sessionCode, forceDelete } = await req.json()
+    const { sessionCode, forceDelete, token, password, isAdmin } = await req.json()
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -27,7 +74,7 @@ Deno.serve(async (req) => {
     // Get session
     const { data: session, error: sessionError } = await supabaseClient
       .from('sessions')
-      .select('id, expires_at')
+      .select('id, expires_at, password_hash, is_public')
       .eq('session_code', sessionCode)
       .single()
 
@@ -38,11 +85,67 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Check if session is expired (skip if force delete)
-    if (!forceDelete && session.expires_at && new Date(session.expires_at) > new Date()) {
+    // Authorization check
+    let authorized = false
+
+    // Check admin access via header
+    const adminSecret = req.headers.get('x-admin-secret')
+    if (adminSecret === ADMIN_SECRET && isAdmin) {
+      authorized = true
+      console.log(`Admin deleting session: ${sessionCode}`)
+    }
+
+    // For password-protected sessions, verify password
+    if (!authorized && session.password_hash) {
+      if (password) {
+        const passwordValid = await verifyPassword(password, session.password_hash)
+        if (passwordValid) {
+          authorized = true
+        } else {
+          return new Response(
+            JSON.stringify({ error: 'Invalid password' }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+      } else if (token) {
+        // Validate session token
+        const { data: tokenData, error: tokenError } = await supabaseClient
+          .from('session_tokens')
+          .select('expires_at')
+          .eq('token', token)
+          .eq('session_id', session.id)
+          .single()
+
+        if (!tokenError && tokenData && new Date(tokenData.expires_at) > new Date()) {
+          authorized = true
+        }
+      }
+      
+      if (!authorized) {
+        return new Response(
+          JSON.stringify({ error: 'Authorization required for protected session' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
+    // For public sessions without forceDelete, check expiration
+    if (!forceDelete && !authorized && session.expires_at && new Date(session.expires_at) > new Date()) {
       return new Response(
         JSON.stringify({ error: 'Session has not expired yet' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Public sessions can be deleted if expired or by anyone viewing (since they're public)
+    if (session.is_public) {
+      authorized = true
+    }
+
+    if (!authorized) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -104,6 +207,16 @@ Deno.serve(async (req) => {
 
     if (accessError) {
       console.error('Error deleting session access:', accessError)
+    }
+
+    // Delete session analytics
+    const { error: analyticsError } = await supabaseClient
+      .from('session_analytics')
+      .delete()
+      .eq('session_id', session.id)
+
+    if (analyticsError) {
+      console.error('Error deleting session analytics:', analyticsError)
     }
 
     // Finally delete the session itself
