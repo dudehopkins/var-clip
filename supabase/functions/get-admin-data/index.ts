@@ -15,9 +15,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Validate admin authorization
-    const adminSecret = req.headers.get('x-admin-secret')
+    // Get admin secret from body
+    const { adminSecret } = await req.json()
     
+    // Validate admin authorization
     if (!adminSecret || adminSecret !== ADMIN_SECRET) {
       console.log('Unauthorized admin access attempt')
       return new Response(
