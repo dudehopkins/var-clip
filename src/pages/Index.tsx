@@ -362,7 +362,11 @@ const Index = () => {
           
           {/* Session Analytics in sidebar */}
           <div className="p-4 border-t border-border">
-            <SessionAnalytics sessionCode={sessionCode} />
+            <SessionAnalytics 
+              sessionCode={sessionCode} 
+              items={items}
+              textContent={textContent}
+            />
           </div>
         </div>
       </main>
