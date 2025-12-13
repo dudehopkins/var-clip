@@ -3,25 +3,33 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Users, Type, Image, File, HardDrive } from "lucide-react";
 
+interface SessionItem {
+  id: string;
+  item_type: string;
+  content?: string | null;
+  file_size?: number | null;
+  file_name?: string | null;
+  file_url?: string | null;
+}
+
 interface SessionAnalyticsProps {
   sessionCode: string;
+  items?: SessionItem[];
+  textContent?: string;
 }
 
-interface AnalyticsData {
-  unique_visitors: number;
-  total_items: number;
-  characters: number;
-  words: number;
-  image_items: number;
-  file_items: number;
-  total_data_bytes: number;
-}
+export const SessionAnalytics = ({ sessionCode, items = [], textContent = "" }: SessionAnalyticsProps) => {
+  const [uniqueVisitors, setUniqueVisitors] = useState(0);
 
-export const SessionAnalytics = ({ sessionCode }: SessionAnalyticsProps) => {
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  // Calculate analytics directly from props for instant updates
+  const characters = textContent.length;
+  const words = textContent.trim() ? textContent.trim().split(/\s+/).length : 0;
+  const imageItems = items.filter(item => item.item_type === 'image').length;
+  const fileItems = items.filter(item => item.item_type === 'file').length;
+  const totalDataBytes = items.reduce((sum, item) => sum + (Number(item.file_size) || 0), 0);
 
   useEffect(() => {
-    const fetchAnalytics = async () => {
+    const fetchVisitors = async () => {
       const { data: session } = await supabase
         .from("sessions")
         .select("id")
@@ -30,67 +38,30 @@ export const SessionAnalytics = ({ sessionCode }: SessionAnalyticsProps) => {
 
       if (!session) return;
 
-      // Get session items directly for realtime data
-      const { data: items } = await supabase
-        .from("session_items")
-        .select("*")
-        .eq("session_id", session.id);
-
-      // Get analytics stats
       const { data: stats } = await supabase
         .from("session_stats")
-        .select("*")
+        .select("unique_visitors")
         .eq("id", session.id)
         .single();
 
-      if (items) {
-        // Calculate text statistics
-        const textItems = items.filter(item => item.item_type === 'text');
-        const allText = textItems.map(item => item.content || '').join(' ');
-        const characters = allText.length;
-        const words = allText.trim() ? allText.trim().split(/\s+/).length : 0;
-
-        // Count image and file items
-        const imageItems = items.filter(item => item.item_type === 'image').length;
-        const fileItems = items.filter(item => item.item_type === 'file').length;
-
-        // Calculate total data bytes
-        const totalDataBytes = items.reduce((sum, item) => sum + (Number(item.file_size) || 0), 0);
-
-        setAnalytics({
-          unique_visitors: Number(stats?.unique_visitors || 0),
-          total_items: items.length,
-          characters,
-          words,
-          image_items: imageItems,
-          file_items: fileItems,
-          total_data_bytes: totalDataBytes,
-        });
+      if (stats) {
+        setUniqueVisitors(Number(stats.unique_visitors || 0));
       }
     };
 
-    fetchAnalytics();
+    fetchVisitors();
 
-    // Subscribe to real-time updates on session_items
+    // Subscribe to analytics changes for visitor count updates
     const channel = supabase
-      .channel('session-analytics-realtime')
+      .channel(`analytics-${sessionCode}`)
       .on(
         'postgres_changes',
         {
-          event: '*',
-          schema: 'public',
-          table: 'session_items'
-        },
-        () => fetchAnalytics()
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'session_analytics'
         },
-        () => fetchAnalytics()
+        () => fetchVisitors()
       )
       .subscribe();
 
@@ -98,8 +69,6 @@ export const SessionAnalytics = ({ sessionCode }: SessionAnalyticsProps) => {
       supabase.removeChannel(channel);
     };
   }, [sessionCode]);
-
-  if (!analytics) return null;
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -123,7 +92,7 @@ export const SessionAnalytics = ({ sessionCode }: SessionAnalyticsProps) => {
             <Users className="w-4 h-4 text-primary" />
             <div>
               <div className="text-xs text-muted-foreground">Visitors</div>
-              <div className="text-lg font-bold">{analytics.unique_visitors}</div>
+              <div className="text-lg font-bold">{uniqueVisitors}</div>
             </div>
           </div>
           
@@ -131,7 +100,7 @@ export const SessionAnalytics = ({ sessionCode }: SessionAnalyticsProps) => {
             <Type className="w-4 h-4 text-blue-500" />
             <div>
               <div className="text-xs text-muted-foreground">Characters</div>
-              <div className="text-lg font-bold">{analytics.characters.toLocaleString()}</div>
+              <div className="text-lg font-bold">{characters.toLocaleString()}</div>
             </div>
           </div>
           
@@ -139,7 +108,7 @@ export const SessionAnalytics = ({ sessionCode }: SessionAnalyticsProps) => {
             <Type className="w-4 h-4 text-blue-500" />
             <div>
               <div className="text-xs text-muted-foreground">Words</div>
-              <div className="text-lg font-bold">{analytics.words.toLocaleString()}</div>
+              <div className="text-lg font-bold">{words.toLocaleString()}</div>
             </div>
           </div>
           
@@ -147,7 +116,7 @@ export const SessionAnalytics = ({ sessionCode }: SessionAnalyticsProps) => {
             <Image className="w-4 h-4 text-green-500" />
             <div>
               <div className="text-xs text-muted-foreground">Images</div>
-              <div className="text-lg font-bold">{analytics.image_items}</div>
+              <div className="text-lg font-bold">{imageItems}</div>
             </div>
           </div>
           
@@ -155,7 +124,7 @@ export const SessionAnalytics = ({ sessionCode }: SessionAnalyticsProps) => {
             <File className="w-4 h-4 text-orange-500" />
             <div>
               <div className="text-xs text-muted-foreground">Files</div>
-              <div className="text-lg font-bold">{analytics.file_items}</div>
+              <div className="text-lg font-bold">{fileItems}</div>
             </div>
           </div>
         </div>
@@ -164,7 +133,7 @@ export const SessionAnalytics = ({ sessionCode }: SessionAnalyticsProps) => {
           <HardDrive className="w-4 h-4 text-purple-500" />
           <div className="flex-1">
             <div className="text-xs text-muted-foreground">Total Data Shared</div>
-            <div className="text-lg font-bold">{formatBytes(analytics.total_data_bytes)}</div>
+            <div className="text-lg font-bold">{formatBytes(totalDataBytes)}</div>
           </div>
         </div>
       </CardContent>
