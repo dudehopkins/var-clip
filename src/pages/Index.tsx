@@ -26,6 +26,7 @@ const Index = () => {
   const [isPublic, setIsPublic] = useState(true);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [hasPassword, setHasPassword] = useState(false);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
 
   // Check if session exists and requires password
   useEffect(() => {
@@ -69,6 +70,7 @@ const Index = () => {
             
             if (tokenData && new Date(tokenData.expires_at) > new Date()) {
               setIsAuthenticated(true);
+              setSessionToken(storedToken);
             } else {
               // Token invalid or expired
               sessionStorage.removeItem(`session_token_${sessionCode}`);
@@ -97,8 +99,9 @@ const Index = () => {
     if (!sessionCode) return;
     
     try {
-      // Clear token if settings changed
-      sessionStorage.removeItem(`session_token_${sessionCode}`);
+    // Clear token if settings changed
+    sessionStorage.removeItem(`session_token_${sessionCode}`);
+    setSessionToken(null);
       
       const { data: session } = await supabase
         .from("sessions")
@@ -157,6 +160,7 @@ const Index = () => {
         // Store server-validated token if provided
         if (data.token) {
           sessionStorage.setItem(`session_token_${sessionCode}`, data.token);
+          setSessionToken(data.token);
         }
         
         // Refresh session data to get latest state
@@ -329,6 +333,7 @@ const Index = () => {
         isAuthenticated={isAuthenticated}
         expiresAt={expiresAt}
         hasPassword={hasPassword}
+        sessionToken={sessionToken}
         onSettingsUpdated={handleSettingsUpdated}
       />
       

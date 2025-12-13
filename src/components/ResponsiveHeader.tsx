@@ -16,6 +16,7 @@ interface ResponsiveHeaderProps {
   isAuthenticated: boolean;
   expiresAt: string | null;
   hasPassword: boolean;
+  sessionToken?: string | null;
   onSettingsUpdated: () => void;
 }
 
@@ -27,6 +28,7 @@ export const ResponsiveHeader = ({
   isAuthenticated, 
   expiresAt,
   hasPassword,
+  sessionToken = null,
   onSettingsUpdated 
 }: ResponsiveHeaderProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -67,6 +69,7 @@ export const ResponsiveHeader = ({
             sessionCode={sessionCode}
             expiresAt={expiresAt}
             hasPassword={hasPassword}
+            sessionToken={sessionToken}
           />
           <SessionSettings 
             sessionCode={sessionCode} 
@@ -138,6 +141,7 @@ export const ResponsiveHeader = ({
                       sessionCode={sessionCode}
                       expiresAt={expiresAt}
                       hasPassword={hasPassword}
+                      sessionToken={sessionToken}
                     />
                   </div>
                   

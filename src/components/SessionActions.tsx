@@ -28,9 +28,15 @@ interface SessionActionsProps {
   sessionCode: string;
   expiresAt: string | null;
   hasPassword?: boolean;
+  sessionToken?: string | null;
 }
 
-export const SessionActions = ({ sessionCode, expiresAt, hasPassword = false }: SessionActionsProps) => {
+export const SessionActions = ({ 
+  sessionCode, 
+  expiresAt, 
+  hasPassword = false,
+  sessionToken = null 
+}: SessionActionsProps) => {
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showExtendDialog, setShowExtendDialog] = useState(false);
@@ -41,7 +47,7 @@ export const SessionActions = ({ sessionCode, expiresAt, hasPassword = false }: 
   const [deletePassword, setDeletePassword] = useState("");
 
   const handleDeleteClick = () => {
-    if (hasPassword) {
+    if (hasPassword && !sessionToken) {
       setShowPasswordDialog(true);
     } else {
       setShowDeleteDialog(true);
@@ -56,6 +62,7 @@ export const SessionActions = ({ sessionCode, expiresAt, hasPassword = false }: 
 
     setIsDeleting(true);
     try {
+      // Verify password and get token for deletion
       const { data, error } = await supabase.functions.invoke('verify-session-password', {
         body: { sessionCode, password: deletePassword }
       });
@@ -66,8 +73,8 @@ export const SessionActions = ({ sessionCode, expiresAt, hasPassword = false }: 
         return;
       }
 
-      // Password verified, proceed with deletion
-      await handleDelete();
+      // Password verified, proceed with deletion using the password
+      await handleDeleteWithPassword(deletePassword);
     } catch (error) {
       console.error("Error verifying password:", error);
       toast.error("Failed to verify password");
@@ -75,11 +82,43 @@ export const SessionActions = ({ sessionCode, expiresAt, hasPassword = false }: 
     }
   };
 
-  const handleDelete = async () => {
+  const handleDeleteWithPassword = async (password: string) => {
     setIsDeleting(true);
     try {
       const { error } = await supabase.functions.invoke('cleanup-expired-session', {
-        body: { sessionCode, forceDelete: true }
+        body: { sessionCode, forceDelete: true, password }
+      });
+
+      if (error) {
+        toast.error("Failed to delete session");
+        return;
+      }
+
+      toast.success("Session deleted successfully");
+      navigate("/");
+    } catch (error) {
+      console.error("Error deleting session:", error);
+      toast.error("Failed to delete session");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+      setShowPasswordDialog(false);
+      setDeletePassword("");
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const body: any = { sessionCode, forceDelete: true };
+      
+      // Include token if available for authorization
+      if (sessionToken) {
+        body.token = sessionToken;
+      }
+
+      const { error } = await supabase.functions.invoke('cleanup-expired-session', {
+        body
       });
 
       if (error) {
@@ -107,10 +146,22 @@ export const SessionActions = ({ sessionCode, expiresAt, hasPassword = false }: 
       return;
     }
 
+    if (minutes > 10080) {
+      toast.error("Extension cannot exceed 10080 minutes (1 week)");
+      return;
+    }
+
     setIsExtending(true);
     try {
+      const body: any = { sessionCode, extendMinutes: minutes };
+      
+      // Include token if available for authorization
+      if (sessionToken) {
+        body.token = sessionToken;
+      }
+
       const { error } = await supabase.functions.invoke('extend-session', {
-        body: { sessionCode, extendMinutes: minutes }
+        body
       });
 
       if (error) {
@@ -214,7 +265,7 @@ export const SessionActions = ({ sessionCode, expiresAt, hasPassword = false }: 
           <DialogHeader>
             <DialogTitle>Extend Session Duration</DialogTitle>
             <DialogDescription>
-              Add more time before this session expires
+              Add more time before this session expires (max 1 week)
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -227,6 +278,7 @@ export const SessionActions = ({ sessionCode, expiresAt, hasPassword = false }: 
                 value={extendMinutes}
                 onChange={(e) => setExtendMinutes(e.target.value)}
                 min="1"
+                max="10080"
               />
             </div>
             <Button
