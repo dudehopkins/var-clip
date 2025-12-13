@@ -6,6 +6,7 @@ import { MediaPanel } from "@/components/MediaPanel";
 import { SessionLanding } from "@/components/SessionLanding";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { AdvancedGraphics } from "@/components/AdvancedGraphics";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { SessionPasswordDialog } from "@/components/SessionPasswordDialog";
 import { SessionAnalytics } from "@/components/SessionAnalytics";
 import { useRealtimeSession } from "@/hooks/useRealtimeSession";
@@ -252,6 +253,9 @@ const Index = () => {
       <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
         <AnimatedBackground />
         <AdvancedGraphics />
+        {isCheckingSession && !showPasswordDialog && (
+          <LoadingScreen message="Loading session..." />
+        )}
         <SessionPasswordDialog
           open={showPasswordDialog}
           onOpenChange={setShowPasswordDialog}
