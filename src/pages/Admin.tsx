@@ -99,9 +99,7 @@ const Admin = () => {
     try {
       // Validate admin access via server-side Edge Function
       const { data, error } = await supabase.functions.invoke('get-admin-data', {
-        headers: {
-          'x-admin-secret': passwordInput
-        }
+        body: { adminSecret: passwordInput }
       });
 
       if (error || !data) {
@@ -132,14 +130,11 @@ const Admin = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke('get-admin-data', {
-        headers: {
-          'x-admin-secret': adminSecret
-        }
+        body: { adminSecret }
       });
 
       if (error || !data) {
         toast.error('Failed to load dashboard data');
-        // If auth fails, redirect to login
         if (error?.message?.includes('401') || error?.message?.includes('Unauthorized')) {
           setIsAdmin(false);
           setShowPasswordDialog(true);
