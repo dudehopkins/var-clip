@@ -11,7 +11,6 @@ import { SessionAnalytics } from "@/components/SessionAnalytics";
 import { useRealtimeSession } from "@/hooks/useRealtimeSession";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Footer } from "@/components/Footer";
 
 const Index = () => {
   const { sessionCode } = useParams();
@@ -376,7 +375,6 @@ const Index = () => {
         </div>
       </main>
       
-      <Footer />
     </div>
   );
 };
