@@ -1,15 +1,11 @@
-import { useTheme } from "./ThemeProvider";
-
 interface LoadingScreenProps {
   message?: string;
 }
 
 export const LoadingScreen = ({ message = "Loading..." }: LoadingScreenProps) => {
-  const { theme } = useTheme();
-  
-  const primaryColor = theme === "light" ? "hsl(260, 70%, 45%)" : "hsl(280, 100%, 70%)";
-  const glowColor = theme === "light" ? "rgba(100, 60, 180, 0.3)" : "rgba(200, 100, 255, 0.4)";
-  const accentColor = theme === "light" ? "hsl(280, 80%, 55%)" : "hsl(300, 100%, 75%)";
+  const primaryColor = "hsl(280, 100%, 70%)";
+  const glowColor = "rgba(200, 100, 255, 0.4)";
+  const accentColor = "hsl(300, 100%, 75%)";
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
