@@ -4,7 +4,7 @@ import "./index.css";
 import { ThemeProvider } from "./components/ThemeProvider";
 
 createRoot(document.getElementById("root")!).render(
-  <ThemeProvider defaultTheme="dark" storageKey="vars-clip-theme">
+  <ThemeProvider>
     <App />
   </ThemeProvider>
 );

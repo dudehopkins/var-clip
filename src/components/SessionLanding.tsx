@@ -6,7 +6,6 @@ import { Clipboard, ArrowRight, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatedBackground } from "./AnimatedBackground";
 import { sessionCodeSchema } from "@/lib/validation";
-import { ThemeToggle } from "./ThemeToggle";
 
 export const SessionLanding = () => {
   const navigate = useNavigate();
@@ -47,11 +46,6 @@ export const SessionLanding = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
       <AnimatedBackground />
-      
-      {/* Theme Toggle - Top Right */}
-      <div className="fixed top-4 right-4 z-50">
-        <ThemeToggle />
-      </div>
       
       <div className="w-full max-w-md space-y-8 animate-fade-in relative z-10 flex flex-col items-center justify-center">
         <div className="text-center space-y-3">

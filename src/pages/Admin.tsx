@@ -15,7 +15,6 @@ import {
   FileText, Image, FileIcon, Search, Download, ArrowUpDown, ArrowUp, 
   ArrowDown, Eye, CalendarIcon, RefreshCw, ChevronLeft, ChevronRight 
 } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { format } from "date-fns";
 
 interface SessionStat {
@@ -474,7 +473,6 @@ const Admin = () => {
               <RefreshCw className="w-4 h-4" />
               Refresh
             </Button>
-            <ThemeToggle />
           </div>
         </div>
 

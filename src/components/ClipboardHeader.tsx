@@ -1,6 +1,5 @@
 import { Clipboard, Users, Share2, Copy } from "lucide-react";
 import { toast } from "sonner";
-import { ThemeToggle } from "./ThemeToggle";
 import { SessionSettings } from "./SessionSettings";
 import { SessionCountdown } from "./SessionCountdown";
 import { SessionActions } from "./SessionActions";
@@ -58,7 +57,6 @@ export const ClipboardHeader = ({ sessionCode, isConnected, userCount, isPublic,
             isAuthenticated={isAuthenticated}
             onSettingsUpdated={onSettingsUpdated}
           />
-          <ThemeToggle />
           
           <div className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg bg-card/50 border border-border">
             <Users className="w-4 h-4 text-accent" />

@@ -3,7 +3,6 @@ import { Clipboard, Users, Share2, Copy, Menu, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
-import { ThemeToggle } from "./ThemeToggle";
 import { SessionSettings } from "./SessionSettings";
 import { SessionCountdown } from "./SessionCountdown";
 import { SessionActions } from "./SessionActions";
@@ -77,7 +76,6 @@ export const ResponsiveHeader = ({
             isAuthenticated={isAuthenticated}
             onSettingsUpdated={onSettingsUpdated}
           />
-          <ThemeToggle />
           
           <div className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg bg-card/50 border border-border">
             <Users className="w-4 h-4 text-accent" />
@@ -151,13 +149,6 @@ export const ResponsiveHeader = ({
                     isAuthenticated={isAuthenticated}
                     onSettingsUpdated={onSettingsUpdated}
                   />
-                  
-                  <div className="pt-4 border-t border-border">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Theme</span>
-                      <ThemeToggle />
-                    </div>
-                  </div>
                 </div>
               </div>
             </SheetContent>
