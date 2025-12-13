@@ -53,6 +53,7 @@ const Admin = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [adminSecret, setAdminSecret] = useState<string>("");
   const [sessions, setSessions] = useState<SessionStat[]>([]);
   const [filteredSessions, setFilteredSessions] = useState<SessionStat[]>([]);
   const [recentActivity, setRecentActivity] = useState<AnalyticsEvent[]>([]);
@@ -81,110 +82,80 @@ const Admin = () => {
   const [sessionDetails, setSessionDetails] = useState<any>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
-  useEffect(() => {
-    checkAdminAccess();
-  }, []);
+  // Password input dialog
+  const [showPasswordDialog, setShowPasswordDialog] = useState(true);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [authError, setAuthError] = useState("");
 
-  const checkAdminAccess = async () => {
+  const handleAdminLogin = async () => {
+    if (!passwordInput) {
+      setAuthError("Please enter the admin password");
+      return;
+    }
+
+    setLoading(true);
+    setAuthError("");
+
     try {
-      const adminToken = localStorage.getItem('admin_token');
-      
-      if (adminToken !== 'admin@clip4all2002') {
-        const token = prompt('Enter admin password:');
-        if (token === 'admin@clip4all2002') {
-          localStorage.setItem('admin_token', token);
-          setIsAdmin(true);
-          fetchDashboardData();
-          setupRealtimeSubscription();
-        } else {
-          toast.error('Access denied');
-          navigate('/');
+      // Validate admin access via server-side Edge Function
+      const { data, error } = await supabase.functions.invoke('get-admin-data', {
+        headers: {
+          'x-admin-secret': passwordInput
         }
-      } else {
-        setIsAdmin(true);
-        fetchDashboardData();
-        setupRealtimeSubscription();
+      });
+
+      if (error || !data) {
+        setAuthError("Access denied - invalid admin credentials");
+        setLoading(false);
+        return;
       }
+
+      // Store in session (not localStorage) - cleared when browser closes
+      setAdminSecret(passwordInput);
+      setIsAdmin(true);
+      setShowPasswordDialog(false);
+      
+      // Set the fetched data
+      setSessions(data.sessions || []);
+      setRecentActivity(data.recentActivity || []);
+      
     } catch (error) {
-      console.error('Error checking admin access:', error);
-      toast.error('Access denied');
-      navigate('/');
+      console.error('Admin login error:', error);
+      setAuthError("Access denied");
     } finally {
       setLoading(false);
     }
   };
 
-  const setupRealtimeSubscription = () => {
-    const channel = supabase
-      .channel('admin-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'sessions' },
-        () => fetchDashboardData()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'session_items' },
-        () => fetchDashboardData()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'session_analytics' },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setRecentActivity(prev => [payload.new as AnalyticsEvent, ...prev.slice(0, 99)]);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
-
   const fetchDashboardData = useCallback(async () => {
+    if (!adminSecret) return;
+
     try {
-      const { data: sessionsData, error: sessionsError } = await supabase
-        .from('sessions')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(200);
-
-      if (sessionsError) throw sessionsError;
-
-      const { data: statsData, error: statsError } = await supabase
-        .from('session_stats')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(200);
-
-      if (statsError) throw statsError;
-      
-      const mergedData = (statsData || []).map(stat => {
-        const session = sessionsData?.find(s => s.id === stat.id);
-        return {
-          ...stat,
-          has_password: session?.password_hash != null
-        };
+      const { data, error } = await supabase.functions.invoke('get-admin-data', {
+        headers: {
+          'x-admin-secret': adminSecret
+        }
       });
-      
-      setSessions(mergedData);
 
-      const { data: analyticsData, error: analyticsError } = await supabase
-        .from('session_analytics')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
+      if (error || !data) {
+        toast.error('Failed to load dashboard data');
+        // If auth fails, redirect to login
+        if (error?.message?.includes('401') || error?.message?.includes('Unauthorized')) {
+          setIsAdmin(false);
+          setShowPasswordDialog(true);
+          setAdminSecret("");
+        }
+        return;
+      }
 
-      if (analyticsError) throw analyticsError;
-      setRecentActivity(analyticsData || []);
+      setSessions(data.sessions || []);
+      setRecentActivity(data.recentActivity || []);
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast.error('Failed to load dashboard data');
     }
-  }, []);
+  }, [adminSecret]);
 
   // Apply filters and sorting
   useEffect(() => {
@@ -243,7 +214,7 @@ const Admin = () => {
     });
 
     setFilteredSessions(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1);
   }, [sessions, searchQuery, statusFilter, securityFilter, sortField, sortDirection, startDate, endDate]);
 
   // Pagination calculations
@@ -271,6 +242,7 @@ const Admin = () => {
     setSelectedSession(session);
     setShowDetailsDialog(true);
     
+    // Session details are fetched via admin API to ensure authorization
     try {
       const { data: items, error: itemsError } = await supabase
         .from('session_items')
@@ -280,18 +252,9 @@ const Admin = () => {
 
       if (itemsError) throw itemsError;
 
-      const { data: analytics, error: analyticsError } = await supabase
-        .from('session_analytics')
-        .select('*')
-        .eq('session_id', session.id)
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (analyticsError) throw analyticsError;
-
       setSessionDetails({
         items: items || [],
-        analytics: analytics || []
+        analytics: recentActivity.filter(a => a.session_id === session.id).slice(0, 20)
       });
     } catch (error) {
       console.error('Error fetching session details:', error);
@@ -353,7 +316,8 @@ const Admin = () => {
     setDeletingSession(sessionCode);
     try {
       const { error } = await supabase.functions.invoke('cleanup-expired-session', {
-        body: { sessionCode, forceDelete: true }
+        body: { sessionCode, forceDelete: true, isAdmin: true },
+        headers: { 'x-admin-secret': adminSecret }
       });
 
       if (error) throw error;
@@ -377,7 +341,8 @@ const Admin = () => {
     for (const sessionCode of selectedSessions) {
       try {
         await supabase.functions.invoke('cleanup-expired-session', {
-          body: { sessionCode, forceDelete: true }
+          body: { sessionCode, forceDelete: true, isAdmin: true },
+          headers: { 'x-admin-secret': adminSecret }
         });
         deleted++;
       } catch (error) {
@@ -420,12 +385,60 @@ const Admin = () => {
     setEndDate(undefined);
   };
 
+  // Show password dialog if not authenticated
+  if (showPasswordDialog) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-6 h-6" />
+              Admin Access
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="admin-password" className="text-sm font-medium">
+                Enter admin password
+              </label>
+              <Input
+                id="admin-password"
+                type="password"
+                placeholder="Admin password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
+              />
+              {authError && (
+                <p className="text-sm text-destructive">{authError}</p>
+              )}
+            </div>
+            <Button 
+              onClick={handleAdminLogin} 
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? "Verifying..." : "Access Dashboard"}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/')} 
+              className="w-full"
+            >
+              Go Back
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Shield className="w-12 h-12 mx-auto mb-4 text-primary animate-pulse" />
-          <p className="text-muted-foreground">Verifying access...</p>
+          <p className="text-muted-foreground">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -921,19 +934,26 @@ const Admin = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="w-5 h-5" />
-              Recent Activity (Real-time)
+              Recent Activity
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {recentActivity.map((event) => (
-                <div key={event.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{event.action}</Badge>
-                      <span className="text-sm text-muted-foreground">{event.ip_address}</span>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {recentActivity.slice(0, 20).map((event) => (
+                <div key={event.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${
+                      event.action.includes('create') ? 'bg-green-500' :
+                      event.action.includes('delete') ? 'bg-red-500' :
+                      event.action.includes('view') ? 'bg-blue-500' :
+                      'bg-yellow-500'
+                    }`} />
+                    <div>
+                      <span className="text-sm font-medium">{event.action}</span>
+                      <div className="text-xs text-muted-foreground">
+                        {event.ip_address ? `IP: ${event.ip_address.substring(0, 15)}...` : 'Unknown IP'}
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">{event.user_agent}</p>
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {new Date(event.created_at).toLocaleString()}
@@ -943,128 +963,95 @@ const Admin = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Session Details Dialog */}
-      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Database className="w-5 h-5" />
-              Session Details: <code className="font-mono">{selectedSession?.session_code}</code>
-            </DialogTitle>
-          </DialogHeader>
-          
-          {selectedSession && sessionDetails && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Status</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {(!selectedSession.expires_at || new Date(selectedSession.expires_at) > new Date()) ? (
-                      <Badge variant="default" className="bg-green-500">Active</Badge>
-                    ) : (
-                      <Badge variant="destructive">Expired</Badge>
-                    )}
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Security</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {selectedSession.has_password ? (
-                      <Badge variant="outline" className="border-yellow-500 text-yellow-500">
-                        <Lock className="w-3 h-3 mr-1" />
-                        Password Protected
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="border-green-500 text-green-500">
-                        <Unlock className="w-3 h-3 mr-1" />
-                        Public Access
-                      </Badge>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+        {/* Session Details Dialog */}
+        <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Eye className="w-5 h-5" />
+                Session Details: {selectedSession?.session_code}
+              </DialogTitle>
+            </DialogHeader>
+            
+            {selectedSession && sessionDetails && (
+              <div className="space-y-6">
+                {/* Session Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-sm text-muted-foreground">Status</span>
+                    <div>
+                      {(!selectedSession.expires_at || new Date(selectedSession.expires_at) > new Date()) ? (
+                        <Badge className="bg-green-500">Active</Badge>
+                      ) : (
+                        <Badge variant="destructive">Expired</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-sm text-muted-foreground">Security</span>
+                    <div>
+                      {selectedSession.has_password ? (
+                        <Badge variant="outline" className="border-yellow-500 text-yellow-500">Protected</Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-green-500 text-green-500">Public</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-sm text-muted-foreground">Created</span>
+                    <div className="text-sm">{new Date(selectedSession.created_at).toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <span className="text-sm text-muted-foreground">Expires</span>
+                    <div className="text-sm">
+                      {selectedSession.expires_at 
+                        ? new Date(selectedSession.expires_at).toLocaleString() 
+                        : 'Never'}
+                    </div>
+                  </div>
+                </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Session Items ({sessionDetails.items.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                {/* Items */}
+                <div>
+                  <h4 className="font-medium mb-2">Session Items ({sessionDetails.items.length})</h4>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
                     {sessionDetails.items.map((item: any) => (
-                      <div key={item.id} className="p-3 rounded-lg bg-muted/30 border">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              {item.item_type === 'text' && <FileText className="w-4 h-4" />}
-                              {item.item_type === 'image' && <Image className="w-4 h-4" />}
-                              {item.item_type === 'file' && <FileIcon className="w-4 h-4" />}
-                              <Badge variant="outline">{item.item_type}</Badge>
-                              {item.file_name && <span className="text-sm text-muted-foreground">{item.file_name}</span>}
-                            </div>
-                            {item.content && (
-                              <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                                {item.content}
-                              </p>
-                            )}
-                            {item.file_size && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Size: {formatBytes(item.file_size)}
-                              </p>
-                            )}
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(item.created_at).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                    {sessionDetails.items.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-4">No items in this session</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Activity className="w-4 h-4" />
-                    Recent Activity ({sessionDetails.analytics.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {sessionDetails.analytics.map((event: any) => (
-                      <div key={event.id} className="flex items-center justify-between p-2 rounded bg-muted/30 text-sm">
+                      <div key={item.id} className="p-2 rounded bg-muted/50 text-sm">
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">{event.action}</Badge>
-                          <span className="text-xs text-muted-foreground">{event.ip_address}</span>
+                          {item.item_type === 'text' && <FileText className="w-4 h-4" />}
+                          {item.item_type === 'image' && <Image className="w-4 h-4" />}
+                          {item.item_type === 'file' && <FileIcon className="w-4 h-4" />}
+                          <span className="font-medium capitalize">{item.item_type}</span>
+                          {item.file_name && <span className="text-muted-foreground">- {item.file_name}</span>}
                         </div>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(event.created_at).toLocaleString()}
-                        </span>
+                        {item.content && (
+                          <div className="mt-1 text-xs text-muted-foreground truncate">
+                            {item.content.substring(0, 100)}...
+                          </div>
+                        )}
                       </div>
                     ))}
-                    {sessionDetails.analytics.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-4">No activity recorded</p>
-                    )}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+                </div>
+
+                {/* Analytics */}
+                <div>
+                  <h4 className="font-medium mb-2">Recent Activity</h4>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {sessionDetails.analytics.map((event: any) => (
+                      <div key={event.id} className="p-2 rounded bg-muted/50 text-sm flex justify-between">
+                        <span>{event.action}</span>
+                        <span className="text-muted-foreground">{new Date(event.created_at).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 };

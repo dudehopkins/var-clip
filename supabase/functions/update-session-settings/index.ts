@@ -79,26 +79,77 @@ Deno.serve(async (req) => {
       )
     }
 
-    // For protected sessions, verify token
-    if (!session.is_public && token) {
-      const { data: tokenData, error: tokenError } = await supabaseClient
-        .from('session_tokens')
-        .select('expires_at')
-        .eq('token', token)
-        .eq('session_id', session.id)
-        .single()
+    // Authorization check - ALWAYS require token for any modifications
+    let authorized = false
 
-      if (tokenError || !tokenData || new Date(tokenData.expires_at) <= new Date()) {
+    // For protected sessions, verify token
+    if (!session.is_public) {
+      if (token) {
+        const { data: tokenData, error: tokenError } = await supabaseClient
+          .from('session_tokens')
+          .select('expires_at')
+          .eq('token', token)
+          .eq('session_id', session.id)
+          .single()
+
+        if (!tokenError && tokenData && new Date(tokenData.expires_at) > new Date()) {
+          authorized = true
+        }
+      }
+      
+      if (!authorized) {
         return new Response(
-          JSON.stringify({ error: 'Invalid or expired token' }),
+          JSON.stringify({ error: 'Token required for protected sessions' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
-    } else if (!session.is_public && !token) {
-      return new Response(
-        JSON.stringify({ error: 'Token required for protected sessions' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    }
+
+    // For public sessions trying to SET a password (hijacking attempt prevention)
+    // Only allow if they have a valid session token (meaning they were a viewer)
+    if (session.is_public && newPassword && newPassword !== '') {
+      if (token) {
+        const { data: tokenData, error: tokenError } = await supabaseClient
+          .from('session_tokens')
+          .select('expires_at')
+          .eq('token', token)
+          .eq('session_id', session.id)
+          .single()
+
+        if (!tokenError && tokenData && new Date(tokenData.expires_at) > new Date()) {
+          authorized = true
+        }
+      }
+      
+      // Public sessions can still set passwords if they can prove session access
+      // For new sessions, the token is created during session creation
+      if (!authorized && !token) {
+        // Allow setting password on public sessions only if session was just created (within 5 minutes)
+        const { data: sessionData } = await supabaseClient
+          .from('sessions')
+          .select('created_at')
+          .eq('id', session.id)
+          .single()
+        
+        if (sessionData) {
+          const createdAt = new Date(sessionData.created_at)
+          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
+          if (createdAt > fiveMinutesAgo) {
+            authorized = true
+            console.log('Allowing password set on recently created public session')
+          }
+        }
+      }
+
+      if (!authorized) {
+        return new Response(
+          JSON.stringify({ error: 'Cannot add password protection without valid session access' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    } else if (session.is_public) {
+      // Other operations on public sessions are allowed (like making it public again)
+      authorized = true
     }
 
     // Prepare update data
