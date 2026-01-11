@@ -401,7 +401,8 @@ const Admin = () => {
                 placeholder="Admin password"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
+                onKeyDown={(e) => e.key === 'Enter' && !loading && handleAdminLogin()}
+                disabled={loading}
               />
               {authError && (
                 <p className="text-sm text-destructive">{authError}</p>
@@ -409,15 +410,26 @@ const Admin = () => {
             </div>
             <Button 
               onClick={handleAdminLogin} 
-              className="w-full"
-              disabled={loading}
+              className="w-full gap-2"
+              disabled={loading || !passwordInput}
             >
-              {loading ? "Verifying..." : "Access Dashboard"}
+              {loading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Authenticating...
+                </>
+              ) : (
+                <>
+                  <Shield className="w-4 h-4" />
+                  Access Dashboard
+                </>
+              )}
             </Button>
             <Button 
               variant="outline" 
               onClick={() => navigate('/')} 
               className="w-full"
+              disabled={loading}
             >
               Go Back
             </Button>
