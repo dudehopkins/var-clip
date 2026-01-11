@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 
 export const CustomCursor = () => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(false);
+  const animationRef = useRef<number | null>(null);
+  const targetRef = useRef({ x: 0, y: 0 });
+  const currentRef = useRef({ x: 0, y: 0 });
   
   // Detect mobile on mount
   useEffect(() => {
@@ -21,14 +24,33 @@ export const CustomCursor = () => {
   const glowColor = "rgba(200, 100, 255, 0.5)";
   const accentColor = "hsl(300, 100%, 75%)";
 
+  // Smooth animation loop - faster lerp factor for quicker response
+  const animate = useCallback(() => {
+    const lerpFactor = 0.35; // Increased from ~0.1 for faster movement
+    
+    currentRef.current.x += (targetRef.current.x - currentRef.current.x) * lerpFactor;
+    currentRef.current.y += (targetRef.current.y - currentRef.current.y) * lerpFactor;
+    
+    setPosition({ x: currentRef.current.x, y: currentRef.current.y });
+    
+    animationRef.current = requestAnimationFrame(animate);
+  }, []);
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      setPosition({ x: e.clientX, y: e.clientY });
+      targetRef.current = { x: e.clientX, y: e.clientY };
     };
 
     window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
+    animationRef.current = requestAnimationFrame(animate);
+    
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [animate]);
 
   // Don't render on mobile devices
   if (isMobile) return null;
