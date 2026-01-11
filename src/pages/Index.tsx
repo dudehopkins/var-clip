@@ -27,7 +27,7 @@ const Index = () => {
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [hasPassword, setHasPassword] = useState(false);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
-  const [sessionNotFound, setSessionNotFound] = useState(false);
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
 
   // Check if session exists and requires password
   useEffect(() => {
@@ -45,9 +45,9 @@ const Index = () => {
           .single();
 
         if (error || !session) {
-          // Session doesn't exist - show not found error
-          setSessionNotFound(true);
-          setIsCheckingSession(false);
+          // Session doesn't exist - auto-create a public session
+          setIsCreatingSession(true);
+          await autoCreateSession(sessionCode);
           return;
         }
 
@@ -93,6 +93,45 @@ const Index = () => {
 
     checkSession();
   }, [sessionCode]);
+
+  // Auto-create a public session when visiting a non-existent link
+  const autoCreateSession = async (code: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-session-password', {
+        body: {
+          sessionCode: code,
+          password: null,
+          isCreating: true,
+          durationMinutes: 60, // Default 1 hour expiration
+        },
+      });
+
+      if (error) {
+        console.error("Error creating session:", error);
+        toast.error("Failed to create session");
+        navigate("/");
+        return;
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        navigate("/");
+        return;
+      }
+
+      if (data?.success) {
+        setIsPublic(true);
+        setIsAuthenticated(true);
+        setIsCheckingSession(false);
+        setIsCreatingSession(false);
+        toast.success("Session created!");
+      }
+    } catch (error) {
+      console.error("Error auto-creating session:", error);
+      toast.error("Failed to create session");
+      navigate("/");
+    }
+  };
 
   const handleSettingsUpdated = async () => {
     // Refresh session data after settings update
@@ -247,41 +286,14 @@ const Index = () => {
     return <SessionLanding />;
   }
 
-  // Show session not found error
-  if (sessionNotFound) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center relative overflow-hidden">
-        <AnimatedBackground />
-        <AdvancedGraphics />
-        <div className="z-10 text-center p-8 bg-card/50 backdrop-blur-xl rounded-2xl border border-border max-w-md">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/20 flex items-center justify-center">
-            <svg className="w-8 h-8 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-foreground mb-2">Session Not Found</h2>
-          <p className="text-muted-foreground mb-6">
-            The session "<span className="text-primary font-mono">{sessionCode}</span>" doesn't exist or has expired.
-          </p>
-          <button
-            onClick={() => navigate("/")}
-            className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors"
-          >
-            Go to Home
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   // Show loading or password dialog if checking session
-  if (isCheckingSession || !isAuthenticated) {
+  if (isCheckingSession || isCreatingSession || !isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
         <AnimatedBackground />
         <AdvancedGraphics />
-        {isCheckingSession && !showPasswordDialog && (
-          <LoadingScreen message="Loading session..." />
+        {(isCheckingSession || isCreatingSession) && !showPasswordDialog && (
+          <LoadingScreen message={isCreatingSession ? "Creating session..." : "Loading session..."} />
         )}
         <SessionPasswordDialog
           open={showPasswordDialog}
